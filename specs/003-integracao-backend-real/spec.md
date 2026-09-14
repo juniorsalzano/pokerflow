@@ -8,6 +8,14 @@
 
 **Input**: User description: "Substituir a implementação mockada (localStorage/BroadcastChannel) por uma API real: backend Node.js hospedado como funções serverless na Vercel (free tier, sem WebSocket persistente), implementando os endpoints já desenhados nos contratos de 001 e 002 (criar sala, entrar na sala, obter sala, sair da sala, votar, revelar, resetar). A camada roomClient da UI passa a ter uma implementação http/httpRoomClient.ts que segue o mesmo contrato do mock, sem mudar os componentes. Estado da sala continua efêmero (sem banco de dados por padrão, conforme constitution/CLAUDE.md) — guardado em memória do processo serverless ou storage temporário equivalente. assinarSala deixa de usar BroadcastChannel e passa a fazer polling HTTP periódico contra GET /api/rooms/:codigo."
 
+## Clarifications
+
+### Session 2026-09-14
+
+- Q: Depois que um participante para de mandar sinal de presença (fechou a aba, perdeu conexão), quanto tempo a sala deve esperar antes de tirá-lo da lista de participantes? → A: 10 minutos de ausência; passado esse tempo, a pessoa precisa entrar de novo (novo participanteId). A limpeza pode ser feita por um job dedicado se necessário, não precisa ser só computada na leitura.
+- Q: O sinal de presença viaja junto do polling de leitura (GET /rooms/:codigo a cada 2s) ou como uma chamada separada e mais espaçada? → A: Chamada separada, a cada ~30-60s — o polling de leitura (2s) continua só lendo, sem gravar no banco a cada ciclo.
+- Q: Quando um participante é removido por 10 minutos de ausência no meio de uma rodada em andamento, o voto que ele já tinha dado é descartado ou fica guardado caso ele volte antes do reset? → A: Descartado — consistente com "sair de propósito", que já descarta o voto hoje; se reconectar depois dos 10 minutos, entra como participante novo e vota de novo.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Time real usa a sala entre dispositivos diferentes (Priority: P1)
@@ -74,7 +82,8 @@ rodada — agora contra a API real, e confirmar resultado idêntico.
 Se a conexão de um participante (incluindo o moderador) cair momentaneamente,
 ou a aba for fechada e reaberta, a sala continua existindo e ele consegue
 voltar a participar sem perder o papel de moderador nem reiniciar a sala,
-desde que dentro do período de inatividade tolerado.
+desde que dentro da janela de tolerância de presença (10 minutos sem sinal —
+ver Clarifications).
 
 **Why this priority**: Hoje isso é garantido no mock via armazenamento local
 do próprio navegador; no backend real, o estado da sala não pode mais
@@ -82,19 +91,21 @@ depender do dispositivo de quem criou — precisa sobreviver de fato do lado do
 servidor, senão a sala "morre" se o criador cair.
 
 **Independent Test**: Criar uma sala, derrubar a conexão do moderador (ex.:
-fechar a aba), reabrir dentro da janela de inatividade da sala e confirmar
-que a sala e o papel de moderador continuam intactos, inclusive para os
-demais participantes.
+fechar a aba), reabrir dentro da janela de tolerância de presença de 10
+minutos e confirmar que a sala e o papel de moderador continuam intactos,
+inclusive para os demais participantes. Reabrir depois de passados os 10
+minutos e confirmar que precisa entrar de novo (novo participanteId, sem
+papel de moderador automático).
 
 **Acceptance Scenarios**:
 
 1. **Given** uma sala ativa com participantes votando, **When** o dispositivo
    do moderador fica temporariamente sem conexão, **Then** a sala continua
    acessível e com estado íntegro para os demais participantes.
-2. **Given** um moderador que recarrega a página ou reabre a aba dentro do
-   período de inatividade da sala, **When** ele volta a acessar o link,
-   **Then** ele é reconhecido como moderador da mesma sala, com o estado
-   atual.
+2. **Given** um moderador que recarrega a página ou reabre a aba dentro da
+   janela de tolerância de presença de 10 minutos, **When** ele volta a
+   acessar o link, **Then** ele é reconhecido como moderador da mesma sala,
+   com o estado atual.
 
 ---
 
@@ -148,10 +159,26 @@ demais participantes.
   plano pago.
 - **FR-008**: O sistema DEVE continuar reconhecendo um participante como
   moderador da mesma sala após ele recarregar a página ou reabrir a aba,
-  desde que a sala ainda esteja ativa (preserva FR-010 da feature 001).
+  desde que ele esteja dentro da janela de tolerância de presença (FR-011;
+  preserva FR-010 da feature 001).
 - **FR-009**: O sistema DEVE informar de forma clara ao usuário quando uma
   ação falhar por indisponibilidade temporária da rede/servidor,
   distinguindo esse caso do erro de "sala não encontrada".
+- **FR-010**: Enquanto estiver com a sala aberta, o cliente DEVE enviar um
+  sinal periódico de presença ao servidor (a cada 30-60s), desacoplado do
+  polling de leitura do estado da sala (a cada 2s) — o sinal de presença
+  não deve gerar escrita no banco na mesma frequência da leitura.
+- **FR-011**: O sistema DEVE remover um participante da lista de
+  participantes ativos de uma sala (incluindo revogar seu papel de
+  moderador, se aplicável) depois de 10 minutos seguidos sem receber seu
+  sinal de presença — sem afetar os demais participantes nem a sala em si,
+  que continua existindo até seu próprio período de inatividade (FR-005).
+  Reconectar dentro desses 10 minutos DEVE restaurar a mesma identidade
+  (mesmo participanteId e papel de moderador, se aplicável); depois desse
+  prazo, a pessoa precisa entrar de novo como um participante novo. O voto
+  já registrado por ela na rodada em andamento (se houver) DEVE ser
+  descartado junto da remoção, do mesmo jeito que já acontece ao sair de
+  propósito.
 
 ### Key Entities
 

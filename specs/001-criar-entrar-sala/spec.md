@@ -92,10 +92,12 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
 > **não** remove mais o participante na hora — ver FR-010 e a User Story 3
 > de `specs/003-integracao-backend-real/spec.md`, que exige o oposto
 > (reconhecer o mesmo participante/moderador ao reabrir, dentro da janela
-> de inatividade). Enquanto isso, alguém que fechou a aba continua
-> aparecendo como presente até a sala inteira expirar. A forma correta de
-> refletir presença real sem quebrar a reconexão é um mecanismo de
-> heartbeat (candidato a spec futura).
+> de tolerância de presença). A forma de refletir presença real sem quebrar
+> a reconexão é um mecanismo de heartbeat, já especificado em FR-010/FR-011
+> de `specs/003-integracao-backend-real/spec.md`: um participante some da
+> lista depois de 10 minutos seguidos sem sinal de presença (chamada
+> separada do polling de leitura, a cada 30-60s); reconectar dentro desse
+> prazo restaura a mesma identidade (inclusive papel de moderador).
 
 ---
 
