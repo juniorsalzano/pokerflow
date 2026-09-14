@@ -1,0 +1,56 @@
+/* Tokens de design do PokerFlow — espelham o canvas de design publicado.
+   Tema escuro é o padrão (:root); [data-theme="light"] sobrescreve. */
+
+:root {
+  --bg: #0d0b14;
+  --bg-grad: radial-gradient(120% 120% at 18% 0%, #1b1330 0%, #0d0b14 55%);
+  --surface: #171223;
+  --surface-elevated: #1f1830;
+  --field: #1f1830;
+  --border: #2c2440;
+  --text: #f4f1f9;
+  --text-muted: #a79cc0;
+  --accent-a: #8b5cf6;
+  --accent-b: #f472b6;
+  --btn-a: #7c3aed;
+  --btn-b: #db2777;
+  --btn-text: #ffffff;
+  --warn-text: #fbbf24;
+  --warn-bg: rgba(251, 191, 36, 0.14);
+
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body: "Manrope", system-ui, sans-serif;
+}
+
+:root[data-theme="light"] {
+  --bg: #faf9fc;
+  --bg-grad: radial-gradient(120% 120% at 18% 0%, #f1e9fb 0%, #faf9fc 55%);
+  --surface: #ffffff;
+  --surface-elevated: #f6f3fa;
+  --field: #f6f3fa;
+  --border: #e9e4f2;
+  --text: #241c33;
+  --text-muted: #6b5e82;
+  --accent-a: #7c3aed;
+  --accent-b: #ec4899;
+  --warn-text: #b45309;
+  --warn-bg: #fef3c7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+a {
+  color: var(--accent-a);
+}
+a:hover {
+  color: var(--accent-b);
+}

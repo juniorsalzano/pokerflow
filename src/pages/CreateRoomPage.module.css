@@ -1,0 +1,50 @@
+.stage {
+  width: 100%;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  background: var(--bg-grad);
+}
+
+.brand {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brandWord {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.gradText {
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.toggleSlot {
+  position: absolute;
+  top: 22px;
+  right: 24px;
+}
+
+@media (max-width: 480px) {
+  .brand {
+    top: 16px;
+    left: 16px;
+  }
+  .toggleSlot {
+    top: 15px;
+    right: 16px;
+  }
+}

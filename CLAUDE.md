@@ -63,6 +63,26 @@ a um recarregamento de página (F5) nesta fase mockada — guardar localmente
 (ex.: `localStorage`) qual sala e papel (moderador/participante) o usuário
 tem, para não perder o controle de revelar/resetar ao dar refresh.
 
+## Identidade Visual
+
+O tom do PokerFlow é **divertido, mas profissional** — é uma ferramenta de
+trabalho que devs vão usar em reunião real com o time, não um app casual.
+Guia para decisões visuais futuras (animações, cores, microcopy):
+
+- Leve e descontraído está certo (o gradiente roxo/degradê, o efeito de carta
+  virando, a linguagem informal em português) — isso dá personalidade e torna
+  o momento da revelação mais gostoso.
+- Mas sem escorregar pro infantil/gamificado demais: sem emoji decorativo,
+  sem excesso de animação/confete, sem tom de piada no texto de erro ou nos
+  estados sérios (ex.: "sala não encontrada" continua direto e claro, não
+  brincalhão). O canvas de design já segue essa linha (tipografia Space
+  Grotesk/Manrope, ícones em SVG, sem emoji) — manter esse equilíbrio ao
+  evoluir o visual em specs futuras (ex.: a animação de revelar votos da
+  spec 002).
+- Pense nisso como "sério com uma pitada de graça", não "divertido com um
+  pouco de seriedade" — o eixo principal é profissionalismo, o tempero é a
+  leveza.
+
 ## Idioma
 
 - Artefatos do Spec Kit (spec.md, plan.md, tasks.md, checklists) → **português (pt-BR)**.

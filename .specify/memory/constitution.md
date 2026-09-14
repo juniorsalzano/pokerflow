@@ -1,11 +1,13 @@
 <!--
 Sync Impact Report
-- Version change: 1.1.1 → 1.2.0
+- Version change: 1.2.0 → 1.3.0
 - Modified principles: n/a
-- Modified sections: Restrições Tecnológicas — fixa hospedagem na Vercel (free
-  tier), API HTTP, e substitui a suposição de WebSocket por polling dentro do
-  limite gratuito, como restrição de custo zero de infraestrutura.
-- Added sections: none
+- Added principles: VI. Segurança por Padrão e Preparo para Crescer (NÃO
+  NEGOCIÁVEL) — higiene básica de segurança em toda superfície pública,
+  revisão de segurança obrigatória antes de considerar uma feature concluída,
+  e arquitetura limpa (sem construir escala prematura, ver Princípio I).
+- Modified sections: Fluxo de Trabalho — adiciona `security-review` como
+  etapa final do ciclo de vida de cada feature.
 - Removed sections: none
 - Follow-up TODOs: none
 -->
@@ -70,6 +72,31 @@ sistema que NÃO PODE regredir silenciosamente.
 central do produto e sua fonte mais provável de bugs sutis (ex.: um voto vazando
 antes da hora).
 
+### VI. Segurança por Padrão e Preparo para Crescer (NÃO NEGOCIÁVEL)
+Toda superfície exposta publicamente (endpoints HTTP, formulários, links de
+sala, código de sala) DEVE seguir práticas básicas de segurança: validar e
+sanitizar toda entrada do usuário (nome de sala, nome de participante, valor
+de voto) contra XSS e injeção; nunca commitar segredos, chaves ou tokens no
+repositório (usar variáveis de ambiente, com um `.env.example` documentando
+quais existem, sem valores reais); aplicar limite de taxa (rate limiting)
+básico nos endpoints públicos — tanto por segurança quanto para não estourar
+o teto do plano gratuito (ver Restrições Tecnológicas); manter dependências
+sem vulnerabilidades conhecidas (auditoria antes de cada release). Toda
+feature implementada DEVE passar por uma revisão de segurança
+(`security-review`) antes de ser considerada concluída.
+
+"Preparo para crescer" NÃO significa construir infraestrutura de escala antes
+da hora (isso violaria o Princípio I) — significa apenas evitar decisões que
+exijam reescrita completa se o uso crescer (ex.: manter a lógica de domínio
+isolada da camada de transporte/dados, como já exige o Princípio V), para que
+adicionar capacidade real no futuro seja incremental, não uma refundação.
+
+**Justificativa**: É uma ferramenta pública, de código aberto e sem
+autenticação — a superfície de ataque mais óbvia é entrada de usuário não
+validada e abuso de endpoints gratuitos. Ser "simples" (Princípio I) não é
+desculpa para pular higiene básica de segurança; e não pensar em arquitetura
+limpa desde o início custa caro depois, mesmo sem construir escala agora.
+
 ## Restrições Tecnológicas
 
 Aplicação web: React + Vite no frontend, Node.js no backend. A API DEVE ser
@@ -99,12 +126,13 @@ custo zero (ex.: Vercel free tier serve tanto o frontend quanto a API).
 As features passam pelo ciclo de vida do Spec Kit neste projeto:
 `/speckit-constitution` (este documento) → `/speckit-specify` → opcionalmente
 `/speckit-clarify` → `/speckit-plan` → opcionalmente `/speckit-checklist` →
-`/speckit-tasks` → opcionalmente `/speckit-analyze` → `/speckit-implement`.
-Cada feature ganha seu próprio diretório `specs/<NNN>-<slug>/` produzido pela
-ferramenta. Pular as etapas de specify/plan/tasks e ir direto para a
-implementação só é aceitável para mudanças triviais e não-funcionais (erros de
-digitação, formatação) que não tocam em comportamento coberto pelos Princípios
-Fundamentais acima.
+`/speckit-tasks` → opcionalmente `/speckit-analyze` → `/speckit-implement` →
+revisão de segurança (`security-review`, ver Princípio VI) antes de considerar
+a feature concluída. Cada feature ganha seu próprio diretório
+`specs/<NNN>-<slug>/` produzido pela ferramenta. Pular as etapas de
+specify/plan/tasks e ir direto para a implementação só é aceitável para
+mudanças triviais e não-funcionais (erros de digitação, formatação) que não
+tocam em comportamento coberto pelos Princípios Fundamentais acima.
 
 ### Idioma da Documentação
 
@@ -133,4 +161,4 @@ andamento não são invalidadas retroativamente, mas DEVEM ser revisadas em rela
 tarefas que conflite com um Princípio Fundamental DEVE ser revisado antes de a
 implementação prosseguir.
 
-**Versão**: 1.2.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14
+**Versão**: 1.3.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14

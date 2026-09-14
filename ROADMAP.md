@@ -40,8 +40,9 @@ avança pelo fluxo acima.
 
 | Feature | Status | Pasta |
 |---------|--------|-------|
-| Criar e entrar em uma sala (com escala de pontos) | Spec | `specs/001-criar-entrar-sala/` |
+| Criar e entrar em uma sala (com escala de pontos) | Implementado (mock) | `specs/001-criar-entrar-sala/` |
 | Rodada de votação (votar, revelar, resetar) | Spec | `specs/002-rodada-votacao/` |
+| Chat na sala (ideia, ainda sem spec) | Não iniciado | — |
 
 Status possíveis: `Não iniciado` → `Spec` → `Plan` → `Tasks` → `Implementado`.
 
@@ -76,3 +77,17 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   ou serviço de terceiros pago. Isso descarta WebSocket persistente (não
   suportado no free tier de funções serverless); o padrão passa a ser polling
   via HTTP, com o mecanismo exato decidido no `/speckit-plan`.
+- **2026-09-14**: Novo princípio VI na constitution (v1.3.0): segurança por
+  padrão (validar/sanitizar entrada, sem segredos no repo, rate limiting,
+  dependências sem vulnerabilidades) + revisão de segurança (`security-review`)
+  obrigatória antes de considerar qualquer feature concluída. "Preparo para
+  crescer" é sobre arquitetura limpa, não sobre construir infraestrutura de
+  escala antes da hora (continua valendo o YAGNI do Princípio I).
+- **2026-09-15**: Feature 001 implementada (42/42 tarefas) — testes (18/18),
+  build e lint limpos, `security-review` sem achados HIGH/MEDIUM. Risco aceito
+  deliberadamente: 1 vulnerabilidade moderada dev-only (`@vitest/mocker`, path
+  traversal só explorável rodando testes localmente) — o fix exige
+  `vitest@5`, que travou o `npm install` neste ambiente por peer deps
+  opcionais não usadas (Playwright/WebdriverIO/MSW); reavaliar quando
+  estabilizar. Não validado automaticamente: sincronização real entre duas
+  abas de navegador (precisa ser testado manualmente por um humano).

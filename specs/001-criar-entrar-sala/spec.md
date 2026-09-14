@@ -163,18 +163,18 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
   nome disponível conseguem entrar na sala com sucesso na primeira tentativa.
 - **SC-004**: A lista de participantes reflete entradas e saídas para os demais
   presentes em até 3 segundos após o evento.
-- **SC-005**: Um participante consegue criar ou entrar em uma sala e votar
-  usando apenas um smartphone, sem necessidade de zoom ou rolagem horizontal.
+- **SC-005**: Um participante consegue criar ou entrar em uma sala e ver a
+  lista de participantes usando apenas um smartphone, sem necessidade de zoom
+  ou rolagem horizontal.
 
 ## Suposições
 
 - As escalas de pontos pré-definidas oferecidas na criação são: Fibonacci
   modificado (0, 1, 2, 3, 5, 8, 13, 21, ?, ☕), Sequencial (1 a 10) e Camisetas
   (PP, P, M, G, GG). A definição exata pode ser refinada no planejamento técnico.
-- O período de inatividade que leva ao encerramento automático de uma sala será
-  definido durante o planejamento técnico (`/speckit-plan`), com um valor padrão
-  razoável (ex.: algumas horas) — não é uma decisão de negócio crítica para esta
-  spec.
+- O período de inatividade que leva ao encerramento automático de uma sala foi
+  definido em 4 horas durante o planejamento técnico (`/speckit-plan` →
+  `research.md`) — não é uma decisão de negócio crítica para esta spec.
 - Não há limite de participantes por sala definido nesta feature; assume-se um
   número típico de um time (até ~15 pessoas) sem necessidade de otimização
   específica para grandes volumes.
