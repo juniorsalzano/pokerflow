@@ -15,6 +15,7 @@ frontend (`pokerflow/src/types/room.ts`):
 | Campo | Presente em... | Regras |
 |---|---|---|
 | `token` | Só na representação **interna** (linha do banco / domínio do `my-api`) | String aleatória gerada no mesmo estilo de `participanteId` (imprevisível). Prova de posse daquele `participanteId`, devolvida **uma única vez** na resposta de `criarSala`/`entrarNaSala`, para o dono. |
+| `ultimaPresencaEm` | Só na representação **interna** | Timestamp. Definido em `entrouEm` na criação/entrada; atualizado a cada `POST /rooms/:codigo/heartbeat` (FR-010). Usado para remover o participante (FR-011, `research.md` §14) — nunca serializado nas respostas HTTP. |
 
 **Regra inegociável**: `token` NUNCA aparece em nenhuma resposta de
 `Sala`/`participantes[]`/`GET obterSala` — só é usado internamente pelo
@@ -25,7 +26,7 @@ sem esse campo antes de responder — ver `research.md` §6 para o racional
 completo (por que a versão anterior desta spec, sem `token`, violava o
 Princípio II).
 
-`sessionStorage["pokerflow:eu:<codigo>"]` (chave já definida em
+`localStorage["pokerflow:eu:<codigo>"]` (chave já definida em
 `specs/001-criar-entrar-sala/data-model.md`) ganha o campo `token` junto de
 `participanteId`/`ehModerador` — extensão aditiva, não quebra o formato
 original.
@@ -43,7 +44,7 @@ PokerFlow — não ao site de currículo.
 | `nome` | `varchar(60)` | `Sala.nome` | Sanitizado e validado antes de gravar (mesma lógica de `validation.ts`). |
 | `escala_pontos` | `varchar(20)` | `Sala.escalaPontos` | Um de `'fibonacci' \| 'sequencial' \| 'camisetas'`. Imutável após criação. |
 | `moderador_id` | `varchar(36)` | `Sala.moderadorId` | UUID do participante criador. |
-| `participantes` | `jsonb` | `Sala.participantes` (`Participante[]`) | Array de `{ id, nome, ehModerador, entrouEm, token }` — **`token` é interno, nunca serializado nas respostas HTTP** (ver "Identidade e credencial" acima). |
+| `participantes` | `jsonb` | `Sala.participantes` (`Participante[]`) | Array de `{ id, nome, ehModerador, entrouEm, token, ultimaPresencaEm }` — **`token` e `ultimaPresencaEm` são internos, nunca serializados nas respostas HTTP** (ver "Identidade e credencial" acima). |
 | `rodada` | `jsonb` | `Sala.rodada` | `{ estado: 'votando' \| 'revelada', votos: Record<participanteId, string> }`. |
 | `criada_em` | `timestamptz` | `Sala.criadaEm` | Definido na criação, imutável. |
 | `ultima_atividade_em` | `timestamptz` | `Sala.ultimaAtividadeEm` | Atualizado a cada ação (entrar/sair/votar/revelar/resetar); usado na checagem de expiração preguiçosa (`research.md` §4). |
@@ -83,10 +84,18 @@ validação já passar (ver "Identidade e credencial" acima e `research.md`
 
 ```
 (inexistente) --criar sala--> linha inserida em planning_poker_rooms
-Ativa --participante entra/sai/vota/revela/reseta--> UPDATE da linha (lock de linha, research.md §3)
+Ativa --participante entra/sai/vota/revela/reseta/heartbeat--> UPDATE da linha (lock de linha, research.md §3)
+Ativa --leitura/ação: cada participante com ultimaPresencaEm > 10min--> removido do array
+  participantes (e de rodada.votos), moderadorId revogado sem reatribuir se era o moderador
+  (FR-011, research.md §14) — a sala em si continua ativa
 Ativa --leitura/ação após 4h sem nenhuma atividade--> tratada como
   SALA_NAO_ENCONTRADA + linha apagada (DELETE preguiçoso, research.md §4)
 ```
+
+Os dois mecanismos de expiração (por participante, 10min; por sala inteira,
+4h) são independentes: o primeiro esvazia participantes de uma sala que
+continua existindo; o segundo descarta a sala inteira. Ambos são checagens
+preguiçosas no mesmo ponto de leitura/ação — nenhum job de fundo.
 
 ## Resumo pós-revelação
 

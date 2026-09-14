@@ -84,9 +84,17 @@ Isso precisa de um humano, como já foi o caso nas features 001/002:
 5. **Resetar** e repetir uma segunda rodada — confirmar que os votos da
    rodada anterior não vazam para a nova (mesma regra do mock).
 6. **Derrubar a conexão do moderador** (ex.: modo avião por alguns segundos,
-   ou fechar a aba) e voltar — confirmar que ele continua reconhecido como
-   moderador da mesma sala (US3, sessionStorage + servidor concordando).
-7. **Duas salas simultâneas**: repetir os passos 1-5 numa segunda sala, em
+   ou fechar a aba) e voltar **dentro de 10 minutos** — confirmar que ele
+   continua reconhecido como moderador da mesma sala, com o mesmo
+   `participanteId` (US3, FR-010/FR-011: `localStorage` local + heartbeat do
+   servidor concordando).
+7. **Ausência além da janela de tolerância**: fechar a aba do moderador e
+   esperar mais de 10 minutos sem reabrir (ou, pra não esperar de verdade,
+   ajustar temporariamente a constante de tolerância no `my-api` durante o
+   teste) — confirmar que ele some da lista de participantes pros demais, e
+   que reabrir o link pede nome de novo (novo `participanteId`, sem papel de
+   moderador automático) — FR-011.
+8. **Duas salas simultâneas**: repetir os passos 1-5 numa segunda sala, em
    paralelo — confirmar isolamento total entre elas (US2).
 
 ## Rollback / desativação

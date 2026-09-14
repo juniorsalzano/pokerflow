@@ -17,8 +17,12 @@ lá. Nenhum componente React muda — só a implementação de `roomClient` por
 trás dos hooks (`useSala`, `useRodada`). A lógica de domínio (votar,
 revelar, resetar, resumoRodada, validação, geração de código) é portada
 quase literalmente do mock para uma camada `domain/` sem dependência de
-HTTP/TypeORM, preservando o Princípio V (lógica core testável). Ver
-`research.md` para o racional de cada decisão técnica.
+HTTP/TypeORM, preservando o Princípio V (lógica core testável). Inclui
+também o mecanismo de heartbeat de presença (US3, FR-010/FR-011,
+`research.md` §14), que substitui a dependência original de `beforeunload`
+no frontend — removida por contradizer a própria US3 (reconectar sem
+perder identidade de moderador). Ver `research.md` para o racional de cada
+decisão técnica.
 
 ## Contexto Técnico
 
@@ -53,7 +57,9 @@ envolvidos.
 
 **Metas de Performance**: mudança de estado visível entre dispositivos
 diferentes em até 5s (SC-002), com polling a cada 2s (`research.md` §5) —
-folga de ~2.5x sobre a meta.
+folga de ~2.5x sobre a meta. Sinal de presença (heartbeat) desacoplado
+desse polling, enviado a cada 30-60s (FR-010); participante ausente por 10
+minutos seguidos é removido da sala (FR-011, `research.md` §14).
 
 **Restrições**: sem WebSocket persistente (free tier Vercel); backend não
 pode introduzir custo novo (reaproveita `my-api` e seu Postgres); Spec Kit
@@ -102,15 +108,18 @@ specs/003-integracao-backend-real/
 ```text
 src/
 ├── services/
-│   ├── roomClient.ts          # Interface já existente (001) — sem mudança de assinatura
-│   ├── mock/                  # Mantido intacto (rollback fácil — quickstart.md)
+│   ├── roomClient.ts          # Interface já existente (001) + método novo enviarPresenca
+│   ├── mock/                  # mockRoomClient ganha enviarPresenca como no-op (sem heartbeat no mock)
 │   └── http/
-│       └── httpRoomClient.ts  # NOVO — implementa roomClient via fetch + polling
-├── hooks/                     # useSala, useRodada — sem mudança (consomem roomClient)
-└── ...                        # componentes/páginas — sem mudança nenhuma
+│       └── httpRoomClient.ts  # NOVO — implementa roomClient via fetch + polling + heartbeat
+├── hooks/
+│   ├── useSala, useRodada     # sem mudança (consomem roomClient)
+│   └── usePresenca.ts         # NOVO — setInterval de 30-60s chamando enviarPresenca
+└── pages/RoomPage.tsx         # passa a montar usePresenca enquanto a sala está aberta
 
 tests/unit/
-└── httpRoomClient.*.test.ts   # NOVO — mocka fetch, valida montagem de request/redação de resposta
+├── httpRoomClient.*.test.ts   # mocka fetch, valida montagem de request/redação de resposta + heartbeat
+└── usePresenca.test.ts        # NOVO — confirma intervalo/limpeza no unmount
 ```
 
 **`my-api`** (`/home/junior/projetos/my-api` — backend, fora deste repositório):
@@ -120,10 +129,11 @@ src/
 └── planning-poker/                       # NOVO módulo, isolado dos demais
     ├── domain/                           # Funções puras, portadas do mock (research.md §10)
     │   ├── room.ts                       # criarSala, votar, revelar, resetar, resumoRodada, estaExpirada
+    │   │                                  # + registrarPresenca, materializarAusentes (research.md §14)
     │   ├── validation.ts                 # validarNomeSala, validarNomeParticipante, sanitizar
     │   ├── generateRoomCode.ts
     │   └── room-client-error.ts          # RoomClientError (mesmo formato do frontend)
-    ├── room.entity.ts                    # Mapeamento TypeORM (data-model.md)
+    ├── room.entity.ts                    # Mapeamento TypeORM (data-model.md), inclui ultimaPresencaEm
     ├── planning-poker.repository.ts      # Leitura/escrita com lock de linha (research.md §3)
     ├── planning-poker.controller.ts      # Rotas de contracts/api-contract.md
     ├── planning-poker.service.ts         # Adaptador fino: HTTP <-> domínio <-> repositório

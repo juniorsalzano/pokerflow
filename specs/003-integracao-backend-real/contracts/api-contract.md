@@ -118,7 +118,7 @@ Cria uma sala. `[roomClient.criarSala]`
 **201**: `{ "codigo": string, "participanteId": string, "token": string, "sala": Sala }`
 — `token` é a credencial secreta do criador (moderador), devolvida só aqui;
 o cliente grava `{ participanteId, token, ehModerador: true }` em
-`sessionStorage["pokerflow:eu:<codigo>"]` (achado D1).
+`localStorage["pokerflow:eu:<codigo>"]` (achado D1).
 
 **Erros**: `ENTRADA_INVALIDA` (nome de sala/criador vazio ou passa do limite).
 
@@ -146,11 +146,33 @@ usada pelo polling (`research.md` §5).
 `token` não bater com o `participanteId` informado, a resposta simplesmente
 **omite `rodada.meuVoto`** — não é um erro (achado D1; `research.md` §6).
 Na prática, o frontend sempre manda os dois, lidos de
-`sessionStorage["pokerflow:eu:<codigo>"]`, assim que existirem.
+`localStorage["pokerflow:eu:<codigo>"]`, assim que existirem.
 
 **200**: `Sala` (formato acima) — ou `null`/404 se não existir.
 
 **Erros**: `SALA_NAO_ENCONTRADA` (inexistente ou expirada — `research.md` §4).
+
+---
+
+### `POST /planning-poker/rooms/:codigo/heartbeat`
+
+Sinal periódico de presença — mantém o participante na lista ativa.
+`[roomClient.enviarPresenca]` (novo). Chamado pelo frontend a cada 30-60s
+enquanto a sala está aberta, **desacoplado** do polling de leitura de
+2s (FR-010, `research.md` §14).
+
+**Corpo**: `{ "participanteId": string, "token": string }`
+
+**204**, sem corpo. Atualiza `ultimaPresencaEm` do participante — não
+retorna `Sala` (o cliente já tem o polling de leitura pra isso; este
+endpoint é só o sinal de vida).
+
+**Erros**: `SALA_NAO_ENCONTRADA`, `NAO_AUTORIZADO` (`token` ausente ou não
+corresponde a `participanteId`). Se o participante já tiver sido removido
+por 10 minutos de ausência (FR-011) antes deste heartbeat chegar,
+`NAO_AUTORIZADO` também se aplica (o `participanteId` do heartbeat não
+existe mais na sala) — o cliente trata isso como qualquer outra credencial
+inválida, voltando à tela de entrada.
 
 ---
 
@@ -217,8 +239,13 @@ Aplicado por IP de origem, só nas rotas deste módulo (`research.md` §8):
 
 | Grupo de rotas | Limite |
 |---|---|
-| Leitura (`GET`) | 60 requisições / 60s |
-| Escrita (`POST`/`DELETE`) | 20 requisições / 60s |
+| Leitura (`GET`) + heartbeat (`POST /heartbeat`) | 60 requisições / 60s |
+| Escrita de negócio (demais `POST`/`DELETE`) | 20 requisições / 60s |
+
+`POST /heartbeat` entra no grupo de leitura (não no de escrita de negócio)
+mesmo fazendo um `UPDATE` — é conceitualmente um sinal de vida, não uma ação
+de negócio, e seu volume real (1-2/min por participante) é muito menor que
+o teto (`research.md` §14).
 
 Ao estourar: `429 Too Many Requests`, corpo
 `{ "codigo": "ENTRADA_INVALIDA", "mensagem": "Muitas requisições. Aguarde um instante." }`

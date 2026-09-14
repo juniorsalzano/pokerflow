@@ -133,10 +133,11 @@ moderador (viola `APENAS_MODERADOR`).
   projeto). O `token` é devolvido **uma única vez**, só para o dono, na
   resposta HTTP de quem criou/entrou — nunca aparece em `participantes[]`
   nem em nenhuma leitura posterior de `Sala`. O cliente grava
-  `{ participanteId, token, ehModerador }` no mesmo `sessionStorage`
-  já usado para sobreviver a F5 (extensão do formato de `pokerflow:eu:<codigo>`
-  definido em `specs/001-criar-entrar-sala/data-model.md` — a chave e o
-  propósito não mudam, só ganha o campo `token`).
+  `{ participanteId, token, ehModerador }` no mesmo `localStorage`
+  já usado para sobreviver a F5 e a fechar/reabrir a aba (extensão do
+  formato de `pokerflow:eu:<codigo>` definido em
+  `specs/001-criar-entrar-sala/data-model.md` — a chave e o propósito não
+  mudam, só ganha o campo `token`).
 - Toda ação que hoje só verificava `participanteId` passa a exigir também o
   `token` correspondente, validado no servidor contra o valor guardado
   internamente (nunca serializado) na linha da sala:
@@ -295,3 +296,65 @@ adicional.
 existente (fora do escopo combinado: só mexer no que impacta o PokerFlow).
 Se isso precisar mudar no futuro, é uma decisão própria do `my-api`, não
 desta feature.
+
+## 14. Heartbeat de presença por participante (FR-010/FR-011, US3 revisada)
+
+**Contexto**: a primeira versão desta feature dependia de um `beforeunload`
+no frontend chamando `sairDaSala` para tirar alguém da lista ao fechar a
+aba. Isso contradizia a própria US3 (reconectar sem perder identidade) — foi
+removido do frontend antes deste planejamento (ver ROADMAP.md,
+2026-09-14). Sem esse sinal, não existe mais nenhuma forma de saber que um
+participante específico ficou inativo — só o timer de sala inteira (4h,
+decisão #4) continuava valendo, o que deixava a lista de participantes
+imprecisa por horas.
+
+**Decisão**: cada participante ganha um campo `ultimaPresencaEm`
+(timestamp), atualizado por um endpoint novo e dedicado
+(`POST /rooms/:codigo/heartbeat`), chamado pelo frontend a cada 30-60s
+enquanto `RoomPage` está montada — **desacoplado** do polling de leitura
+(`GET`, a cada 2s, decisão #5), que continua só lendo. Em toda leitura ou
+ação sobre uma sala (mesmo ponto onde a expiração de 4h já é checada,
+decisão #4), o servidor primeiro "materializa" a sala: remove do array
+`participantes` (e do mapa `rodada.votos`) qualquer participante cujo
+`ultimaPresencaEm` esteja há mais de 10 minutos no passado — revogando
+`moderadorId` se for o caso, sem reatribuir (mesma regra já aceita para
+"moderador sai da sala", spec 001) — e só então aplica a operação pedida
+e persiste. Reconectar dentro dos 10 minutos simplesmente retoma o
+heartbeat antes de qualquer leitura/ação materializar a remoção; depois
+desses 10 minutos, a linha do array já não existe mais e a pessoa entra
+como participante novo.
+
+**Racional**: mesma filosofia da expiração de sala (decisão #4) — checagem
+preguiçosa, sem job/cron de fundo, porque funções serverless da Vercel não
+mantêm processo persistente. Reaproveita o mesmo ponto de leitura que já
+existe (toda ação já lê a linha inteira antes de mutar — decisão #3), então
+"materializar" a remoção não é uma passada extra pelo banco, é parte da
+mesma leitura. O heartbeat é desacoplado do polling de leitura para não
+multiplicar por 15x (participantes/sala) a frequência de escrita no
+Postgres — 2s de leitura já seria uma escrita a cada 2s por participante se
+fosse acoplado; 30-60s mantém a escrita ~30-60x mais rara, dentro do
+orçamento do free tier.
+
+**Rate limiting**: reaproveita o grupo "leitura" já definido (decisão #8,
+60 req/60s por IP) em vez de criar um terceiro grupo — o heartbeat é
+conceitualmente mais parecido com um sinal de vida do que com uma ação de
+negócio, e seu volume real (1-2/min por participante) fica bem abaixo desse
+teto.
+
+**Alternativas consideradas**:
+- *Job/cron dedicado de limpeza* (Vercel Cron) — o usuário sinalizou
+  abertura a isso ("se precisar de um job, podemos criar depois"), mas
+  rejeitado por agora pelo mesmo motivo da decisão #4: adiciona componente
+  novo sem necessidade funcional, já que a checagem preguiçosa no próprio
+  fluxo de leitura/ação já resolve o requisito (FR-011). Fica como
+  candidato caso apareça um caso real de sala sem nenhuma leitura por muito
+  tempo com participante fantasma incomodando alguém — não é o caso hoje.
+- *Acoplar o heartbeat ao polling de leitura* (`GET` já manda
+  `participanteId`/`token` — decisão #6) — rejeitado: multiplicaria a
+  escrita no banco por um fator de 60-30x sem necessidade, já que o
+  requisito (FR-011) só precisa de uma amostragem a cada 30-60s, não a
+  cada 2s.
+- *WebSocket/conexão persistente para detectar desconexão de verdade* —
+  fora de cogitação, já rejeitado na constitution (Restrições
+  Tecnológicas) e reconfirmado nesta conversa: Vercel free tier não
+  mantém função serverless viva entre requisições.
