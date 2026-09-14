@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import ConsensusBadge from "../components/ConsensusBadge/ConsensusBadge";
 import HandOfCards from "../components/HandOfCards/HandOfCards";
 import JoinRoomForm from "../components/JoinRoomForm/JoinRoomForm";
 import RoundControls from "../components/RoundControls/RoundControls";
@@ -12,8 +11,19 @@ import { usePresenca } from "../hooks/usePresenca";
 import { useRodada } from "../hooks/useRodada";
 import { useRoom } from "../hooks/useRoom";
 import { resumoRodada } from "../services/mock/roomStore";
-import { ESCALAS_PONTOS, ESCALAS_PONTOS_LABEL } from "../types/room";
+import { ESCALAS_PONTOS, ESCALAS_PONTOS_LABEL, ResumoRodada } from "../types/room";
 import styles from "./RoomPage.module.css";
+
+function textoResumo(resumo: ResumoRodada): string {
+  const { resultado } = resumo;
+  if (resultado.tipo === "consenso") {
+    return `Consenso: ${resultado.valor}`;
+  }
+  if (resultado.tipo === "dispersao") {
+    return `Dispersão ${resultado.min}–${resultado.max}`;
+  }
+  return "Sem consenso";
+}
 
 export default function RoomPage() {
   const { codigo } = useParams<{ codigo: string }>();
@@ -123,6 +133,11 @@ export default function RoomPage() {
             </span>
           </div>
         </div>
+        <div className={styles.status}>
+          <span className={styles.statusDot} />
+          {revelado ? "Revelado" : "Votação em andamento"}
+          {resumo && <span className={styles.statusResumo}>· {textoResumo(resumo)}</span>}
+        </div>
         <div className={styles.topActions}>
           <button
             type="button"
@@ -133,9 +148,9 @@ export default function RoomPage() {
             aria-live="polite"
           >
             {statusConvite === "copiado"
-              ? "Link copiado!"
+              ? "Link copiado"
               : statusConvite === "erro"
-                ? "Não foi possível copiar"
+                ? "Erro ao copiar"
                 : "Convidar time"}
           </button>
           <ThemeToggle />
@@ -151,13 +166,10 @@ export default function RoomPage() {
           </div>
         )}
 
-        {resumo && (
-          <div className={styles.resumoSlot}>
-            <ConsensusBadge resumo={resumo} />
-          </div>
-        )}
-
-        <h2 className={styles.sectionTitle}>Participantes</h2>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>Participantes</h2>
+          <span className={styles.sectionCount}>{sala.participantes.length}</span>
+        </div>
         <ul className={styles.assentos} aria-label="Participantes da sala">
           {sala.participantes.map((p, indice) => (
             <SeatCard
@@ -171,7 +183,9 @@ export default function RoomPage() {
           ))}
         </ul>
 
-        <h2 className={styles.sectionTitle}>Suas cartas</h2>
+        <div className={styles.sectionHead}>
+          <h2 className={styles.sectionTitle}>Suas cartas</h2>
+        </div>
         <HandOfCards
           valores={ESCALAS_PONTOS[sala.escalaPontos]}
           valorSelecionado={meuVoto}

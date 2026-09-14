@@ -2,13 +2,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  width: 76px;
+  gap: 11px;
+  width: 96px;
 }
 
 .carta {
-  width: 56px;
-  height: 76px;
+  width: 84px;
+  height: 112px;
   perspective: 600px;
 }
 
@@ -46,8 +46,9 @@
   color: #ffffff;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 18px;
+  font-size: 26px;
   transform: rotateY(180deg);
+  box-shadow: 0 10px 24px rgba(139, 92, 246, 0.3);
 }
 
 /* vazio: participante ainda não votou — contorno simples, sem verso "de carta". */
@@ -60,11 +61,12 @@
 .carta.oculto .faceVerso {
   background: linear-gradient(135deg, var(--surface-elevated), var(--surface));
   border: 1.5px solid var(--accent-a);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
 }
 
 .versoMarca {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: var(--accent-a);
   opacity: 0;
@@ -75,7 +77,7 @@
 }
 
 .nome {
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--text);
   text-align: center;
@@ -97,15 +99,19 @@
   color: var(--text-muted);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
   .item {
-    width: 64px;
+    width: 68px;
+    gap: 8px;
   }
   .carta {
-    width: 48px;
-    height: 66px;
+    width: 60px;
+    height: 82px;
   }
   .faceFrente {
-    font-size: 15px;
+    font-size: 18px;
+  }
+  .nome {
+    font-size: 12px;
   }
 }

@@ -4,19 +4,28 @@
   padding: 0;
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 18px;
   justify-content: center;
 }
 
 .carta {
-  width: 56px;
-  height: 80px;
+  width: 92px;
+  height: 130px;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   perspective: 600px;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s ease;
+}
+
+.carta:not(:disabled):not(.selecionada):hover {
+  transform: translateY(-6px);
+}
+
+.carta.selecionada {
+  transform: translateY(-10px);
 }
 
 .carta:disabled {
@@ -50,17 +59,20 @@
   backface-visibility: hidden;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 20px;
+  font-size: 27px;
 }
 
 .faceFrente {
   background: var(--surface-elevated);
   border: 1.5px solid var(--border);
   color: var(--text);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.carta:not(:disabled):hover .faceFrente {
+.carta:not(:disabled):not(.selecionada):hover .faceFrente {
   border-color: var(--accent-a);
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
 }
 
 .faceVerso {
@@ -68,16 +80,25 @@
   color: #ffffff;
   border: 1.5px solid transparent;
   transform: rotateY(180deg);
-  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.35);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.35), 0 22px 40px rgba(139, 92, 246, 0.4);
 }
 
-@media (max-width: 480px) {
+@media (max-width: 640px) {
+  .mao {
+    gap: 12px;
+  }
   .carta {
-    width: 48px;
-    height: 68px;
+    width: 66px;
+    height: 94px;
+  }
+  .carta:not(:disabled):not(.selecionada):hover {
+    transform: none;
+  }
+  .carta.selecionada {
+    transform: translateY(-6px);
   }
   .faceFrente,
   .faceVerso {
-    font-size: 16px;
+    font-size: 19px;
   }
 }
