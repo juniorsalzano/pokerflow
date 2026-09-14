@@ -102,3 +102,10 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   sigilo do voto é best-effort enquanto a fase mock estiver em vigor (sem
   servidor real guardando os votos) — decisão consciente, revisar quando a
   API real existir. Plan da spec 002 documenta essa ressalva.
+- **2026-09-14**: Feature 002 implementada (36/36 tarefas) — testes (50/50),
+  build limpo. `security-review` (feito a posteriori sobre o diff do commit
+  `c5ed493`, já que a feature foi mesclada direto em main) sem achados
+  HIGH/MEDIUM — sem `dangerouslySetInnerHTML`/`innerHTML`/`eval`, e código é
+  100% client-side/mock nesta fase (sem backend para checar auth/injection
+  ainda). Fecha o requisito do Princípio VI que ainda estava pendente para
+  esta feature.
