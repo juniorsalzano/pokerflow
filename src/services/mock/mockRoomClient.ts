@@ -1,6 +1,14 @@
 import { RoomClient } from "../roomClient";
 import { CriarSalaInput, RoomClientError, Sala } from "../../types/room";
-import { adicionarParticipante, criarSala as criarSalaPura, estaExpirada, removerParticipante } from "./roomStore";
+import {
+  adicionarParticipante,
+  criarSala as criarSalaPura,
+  estaExpirada,
+  removerParticipante,
+  resetar as resetarPura,
+  revelar as revelarPura,
+  votar as votarPura,
+} from "./roomStore";
 
 /**
  * Implementação mockada de RoomClient: localStorage como fonte da verdade
@@ -128,5 +136,35 @@ export const mockRoomClient: RoomClient = {
     if (!sala) return; // já não existe — nada a fazer, operação idempotente
     const salaAtualizada = removerParticipante(sala, participanteId);
     salvarSala(salaAtualizada);
+  },
+
+  async votar(codigo: string, participanteId: string, valor: string) {
+    const sala = lerSalaAtual(codigo);
+    if (!sala) {
+      throw new RoomClientError("SALA_NAO_ENCONTRADA", "Essa sala não existe ou expirou.");
+    }
+    const salaAtualizada = votarPura(sala, participanteId, valor);
+    salvarSala(salaAtualizada);
+    return salaAtualizada;
+  },
+
+  async revelar(codigo: string, participanteId: string) {
+    const sala = lerSalaAtual(codigo);
+    if (!sala) {
+      throw new RoomClientError("SALA_NAO_ENCONTRADA", "Essa sala não existe ou expirou.");
+    }
+    const salaAtualizada = revelarPura(sala, participanteId);
+    salvarSala(salaAtualizada);
+    return salaAtualizada;
+  },
+
+  async resetar(codigo: string, participanteId: string) {
+    const sala = lerSalaAtual(codigo);
+    if (!sala) {
+      throw new RoomClientError("SALA_NAO_ENCONTRADA", "Essa sala não existe ou expirou.");
+    }
+    const salaAtualizada = resetarPura(sala, participanteId);
+    salvarSala(salaAtualizada);
+    return salaAtualizada;
   },
 };

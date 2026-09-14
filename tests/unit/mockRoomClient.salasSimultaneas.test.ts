@@ -105,4 +105,47 @@ describe("mockRoomClient — salas simultâneas são independentes", () => {
     expect(salaAAtualizada?.participantes).toHaveLength(0);
     expect(salaB?.participantes.map((p) => p.nome)).toEqual(["Bruno"]);
   });
+
+  it("votar na sala A não afeta a rodada da sala B", async () => {
+    const { codigo: codigoA, sala: salaA } = await mockRoomClient.criarSala({
+      nomeSala: "Sala A",
+      nomeCriador: "Ana",
+      escalaPontos: "fibonacci",
+    });
+    const { codigo: codigoB, sala: salaB } = await mockRoomClient.criarSala({
+      nomeSala: "Sala B",
+      nomeCriador: "Bruno",
+      escalaPontos: "fibonacci",
+    });
+
+    await mockRoomClient.votar(codigoA, salaA.participantes[0].id, "5");
+
+    const salaAAtualizada = await mockRoomClient.obterSala(codigoA);
+    const salaBAtualizada = await mockRoomClient.obterSala(codigoB);
+
+    expect(salaAAtualizada?.rodada.votos).toEqual({ [salaA.participantes[0].id]: "5" });
+    expect(salaBAtualizada?.rodada.votos).toEqual({});
+    expect(salaB).toBeDefined();
+  });
+
+  it("revelar a rodada da sala A não afeta o estado da rodada da sala B", async () => {
+    const { codigo: codigoA, sala: salaA } = await mockRoomClient.criarSala({
+      nomeSala: "Sala A",
+      nomeCriador: "Ana",
+      escalaPontos: "fibonacci",
+    });
+    const { codigo: codigoB } = await mockRoomClient.criarSala({
+      nomeSala: "Sala B",
+      nomeCriador: "Bruno",
+      escalaPontos: "fibonacci",
+    });
+
+    await mockRoomClient.revelar(codigoA, salaA.participantes[0].id);
+
+    const salaAAtualizada = await mockRoomClient.obterSala(codigoA);
+    const salaBAtualizada = await mockRoomClient.obterSala(codigoB);
+
+    expect(salaAAtualizada?.rodada.estado).toBe("revelada");
+    expect(salaBAtualizada?.rodada.estado).toBe("votando");
+  });
 });

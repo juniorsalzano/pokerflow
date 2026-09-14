@@ -1,0 +1,42 @@
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.revelar,
+.resetar {
+  padding: 12px 22px;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.revelar {
+  border: none;
+  color: var(--btn-text);
+  background: linear-gradient(135deg, var(--btn-a), var(--btn-b));
+  box-shadow: 0 12px 30px rgba(124, 58, 237, 0.35);
+}
+
+.resetar {
+  border: 1px solid var(--border);
+  color: var(--text);
+  background: var(--surface);
+}
+
+.revelar:disabled,
+.resetar:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+  .revelar,
+  .resetar {
+    padding: 11px 16px;
+    font-size: 13px;
+  }
+}

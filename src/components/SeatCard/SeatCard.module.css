@@ -1,0 +1,111 @@
+.item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 76px;
+}
+
+.carta {
+  width: 56px;
+  height: 76px;
+  perspective: 600px;
+}
+
+.flipper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.5s ease;
+  transform: rotateY(0deg);
+}
+
+.carta.revelado .flipper {
+  transform: rotateY(180deg);
+}
+
+.faceVerso,
+.faceFrente {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  backface-visibility: hidden;
+}
+
+.faceVerso {
+  background: var(--surface-elevated);
+  border: 1.5px dashed var(--border);
+}
+
+.faceFrente {
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  transform: rotateY(180deg);
+}
+
+/* vazio: participante ainda não votou — contorno simples, sem verso "de carta". */
+.carta.vazio .faceVerso {
+  background: transparent;
+  border: 1.5px dashed var(--border);
+}
+
+/* oculto: já votou, mas o valor não é exibido — verso sólido, sinalizando "já votou". */
+.carta.oculto .faceVerso {
+  background: linear-gradient(135deg, var(--surface-elevated), var(--surface));
+  border: 1.5px solid var(--accent-a);
+}
+
+.versoMarca {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--accent-a);
+  opacity: 0;
+}
+
+.carta.oculto .versoMarca {
+  opacity: 0.55;
+}
+
+.nome {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.nome.souEu {
+  color: var(--accent-a);
+}
+
+.naoVotou {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+@media (max-width: 480px) {
+  .item {
+    width: 64px;
+  }
+  .carta {
+    width: 48px;
+    height: 66px;
+  }
+  .faceFrente {
+    font-size: 15px;
+  }
+}

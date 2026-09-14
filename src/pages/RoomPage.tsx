@@ -1,13 +1,18 @@
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import ConsensusBadge from "../components/ConsensusBadge/ConsensusBadge";
+import HandOfCards from "../components/HandOfCards/HandOfCards";
 import JoinRoomForm from "../components/JoinRoomForm/JoinRoomForm";
-import ParticipantList from "../components/ParticipantList/ParticipantList";
+import RoundControls from "../components/RoundControls/RoundControls";
+import SeatCard from "../components/SeatCard/SeatCard";
 import ThemeToggle from "../components/ThemeToggle/ThemeToggle";
 import { useJoinRoom } from "../hooks/useJoinRoom";
 import { useModerator } from "../hooks/useModerator";
+import { useRodada } from "../hooks/useRodada";
 import { useRoom } from "../hooks/useRoom";
+import { resumoRodada } from "../services/mock/roomStore";
 import { roomClient } from "../services/roomClient";
-import { ESCALAS_PONTOS_LABEL } from "../types/room";
+import { ESCALAS_PONTOS, ESCALAS_PONTOS_LABEL } from "../types/room";
 import styles from "./RoomPage.module.css";
 
 export default function RoomPage() {
@@ -15,6 +20,7 @@ export default function RoomPage() {
   const { sala, carregando } = useRoom(codigo);
   const { identidade, salvarIdentidade } = useModerator(codigo);
   const { entrar, erro, carregando: entrando } = useJoinRoom(codigo ?? "");
+  const { votar, revelar, resetar, erro: erroRodada } = useRodada(codigo, identidade?.participanteId);
 
   const souParticipante =
     !!identidade && !!sala?.participantes.some((p) => p.id === identidade.participanteId);
@@ -78,6 +84,11 @@ export default function RoomPage() {
     );
   }
 
+  const revelado = sala.rodada.estado === "revelada";
+  const ehModerador = identidade?.participanteId === sala.moderadorId;
+  const meuVoto = identidade ? sala.rodada.votos[identidade.participanteId] : undefined;
+  const resumo = revelado ? resumoRodada(sala) : null;
+
   return (
     <div className={styles.app}>
       <div className={styles.topbar}>
@@ -113,15 +124,41 @@ export default function RoomPage() {
       </div>
 
       <div className={styles.body}>
+        {erroRodada && <p className={styles.erroRodada}>{erroRodada}</p>}
+
+        {ehModerador && (
+          <div className={styles.controlsSlot}>
+            <RoundControls estado={sala.rodada.estado} onRevelar={revelar} onResetar={resetar} />
+          </div>
+        )}
+
+        {resumo && (
+          <div className={styles.resumoSlot}>
+            <ConsensusBadge resumo={resumo} />
+          </div>
+        )}
+
         <h2 className={styles.sectionTitle}>Participantes</h2>
-        <ParticipantList
-          participantes={sala.participantes}
-          vocesId={identidade?.participanteId}
+        <ul className={styles.assentos} aria-label="Participantes da sala">
+          {sala.participantes.map((p, indice) => (
+            <SeatCard
+              key={p.id}
+              participante={p}
+              voto={sala.rodada.votos[p.id]}
+              revelado={revelado}
+              souEu={p.id === identidade?.participanteId}
+              indice={indice}
+            />
+          ))}
+        </ul>
+
+        <h2 className={styles.sectionTitle}>Suas cartas</h2>
+        <HandOfCards
+          valores={ESCALAS_PONTOS[sala.escalaPontos]}
+          valorSelecionado={meuVoto}
+          desabilitado={revelado}
+          onVotar={votar}
         />
-        <p className={styles.aviso}>
-          A rodada de votação chega em uma próxima atualização — por enquanto, quem
-          entra na sala já aparece aqui para todos, em tempo real.
-        </p>
       </div>
     </div>
   );

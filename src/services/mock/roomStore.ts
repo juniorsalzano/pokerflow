@@ -1,6 +1,13 @@
 import { generateRoomCode } from "./generateRoomCode";
 import { nomesIguaisCaseInsensitive, validarNomeParticipante, validarNomeSala } from "./validation";
-import { CriarSalaInput, Participante, RoomClientError, Sala } from "../../types/room";
+import {
+  CriarSalaInput,
+  ESCALAS_PONTOS,
+  Participante,
+  ResumoRodada,
+  RoomClientError,
+  Sala,
+} from "../../types/room";
 
 /** Limite de inatividade após o qual uma sala é tratada como expirada (FR-008, research.md §5). */
 export const LIMITE_INATIVIDADE_MS = 4 * 60 * 60 * 1000;
@@ -32,6 +39,7 @@ export function criarSala(input: CriarSalaInput, agora: number = Date.now()): Sa
     participantes: [moderador],
     criadaEm: agora,
     ultimaAtividadeEm: agora,
+    rodada: { estado: "votando", votos: {} },
   };
 }
 
@@ -91,4 +99,110 @@ export function removerParticipante(
     participantes: sala.participantes.filter((p) => p.id !== participanteId),
     ultimaAtividadeEm: agora,
   };
+}
+
+/**
+ * Registra ou substitui o voto de um participante na rodada atual
+ * (FR-002/FR-005). Lança `RODADA_JA_REVELADA` se a rodada já foi revelada
+ * (FR-009 — votos travados após o reveal) e `VALOR_INVALIDO` se o valor não
+ * pertencer à escala de pontos da sala.
+ */
+export function votar(
+  sala: Sala,
+  participanteId: string,
+  valor: string,
+  agora: number = Date.now(),
+): Sala {
+  if (sala.rodada.estado !== "votando") {
+    throw new RoomClientError(
+      "RODADA_JA_REVELADA",
+      "Os votos desta rodada já foram revelados. Aguarde o próximo reset para votar.",
+    );
+  }
+  if (!ESCALAS_PONTOS[sala.escalaPontos].includes(valor)) {
+    throw new RoomClientError("VALOR_INVALIDO", "Esse valor não faz parte da escala desta sala.");
+  }
+
+  return {
+    ...sala,
+    rodada: {
+      ...sala.rodada,
+      votos: { ...sala.rodada.votos, [participanteId]: valor },
+    },
+    ultimaAtividadeEm: agora,
+  };
+}
+
+/**
+ * Revela os votos da rodada atual (FR-006/FR-007), exclusivo ao moderador.
+ * Lança `APENAS_MODERADOR` se quem chamou não for o dono da sala.
+ */
+export function revelar(sala: Sala, participanteId: string, agora: number = Date.now()): Sala {
+  if (participanteId !== sala.moderadorId) {
+    throw new RoomClientError("APENAS_MODERADOR", "Apenas o moderador da sala pode revelar os votos.");
+  }
+
+  return {
+    ...sala,
+    rodada: { ...sala.rodada, estado: "revelada" },
+    ultimaAtividadeEm: agora,
+  };
+}
+
+/**
+ * Limpa os votos da rodada atual e volta ao estado de votação oculta
+ * (FR-010/FR-011/FR-012), exclusivo ao moderador. Aceito em qualquer estado
+ * atual da rodada (idempotente em relação a `estado`).
+ */
+export function resetar(sala: Sala, participanteId: string, agora: number = Date.now()): Sala {
+  if (participanteId !== sala.moderadorId) {
+    throw new RoomClientError("APENAS_MODERADOR", "Apenas o moderador da sala pode resetar a rodada.");
+  }
+
+  return {
+    ...sala,
+    rodada: { estado: "votando", votos: {} },
+    ultimaAtividadeEm: agora,
+  };
+}
+
+/** Verdadeiro se `valor` for um valor numérico da escala (exclui "?" e "☕"). */
+function ehValorNumerico(valor: string): boolean {
+  return valor.trim() !== "" && !Number.isNaN(Number(valor));
+}
+
+/**
+ * Resumo derivado da rodada atual (data-model.md §Resumo pós-revelação),
+ * calculado sob demanda — nunca persistido. Itera sobre `sala.participantes`
+ * (a lista atual), nunca sobre `Object.keys(rodada.votos)` diretamente: o
+ * voto de alguém que já saiu da sala não deve mais contar em nenhum
+ * resultado (Caso de Borda da spec).
+ */
+export function resumoRodada(sala: Sala): ResumoRodada {
+  const { votos } = sala.rodada;
+
+  const naoVotaram = sala.participantes.filter((p) => !(p.id in votos));
+  const votosAtuais = sala.participantes.filter((p) => p.id in votos).map((p) => votos[p.id]);
+  const votaram = votosAtuais.length;
+
+  if (votaram === 0) {
+    return { votaram, naoVotaram, resultado: { tipo: "sem-consenso" } };
+  }
+
+  const todosIdenticos = votosAtuais.every((v) => v === votosAtuais[0]);
+  if (todosIdenticos) {
+    return { votaram, naoVotaram, resultado: { tipo: "consenso", valor: votosAtuais[0] } };
+  }
+
+  const escalaNumerica = sala.escalaPontos === "fibonacci" || sala.escalaPontos === "sequencial";
+  if (escalaNumerica && votosAtuais.every(ehValorNumerico)) {
+    const ordenados = [...votosAtuais].sort((a, b) => Number(a) - Number(b));
+    return {
+      votaram,
+      naoVotaram,
+      resultado: { tipo: "dispersao", min: ordenados[0], max: ordenados[ordenados.length - 1] },
+    };
+  }
+
+  return { votaram, naoVotaram, resultado: { tipo: "sem-consenso" } };
 }

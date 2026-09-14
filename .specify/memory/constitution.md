@@ -1,13 +1,15 @@
 <!--
 Sync Impact Report
-- Version change: 1.3.0 → 1.4.0
-- Modified principles: n/a
-- Modified sections: Idioma da Documentação — mensagens de commit passam a
-  seguir Conventional Commits com descrição em português (prefixo
-  feat/fix/docs/etc. em inglês), revertendo a regra anterior de commit
-  inteiramente em inglês.
+- Version change: 1.4.0 → 1.4.1
+- Modified principles: II. Sigilo do Voto É Inegociável — adiciona nota
+  reconhecendo que, durante a fase mockada (sem API real), o sigilo é
+  best-effort e não estruturalmente garantido; a garantia inegociável vale
+  para a versão com backend real. Não enfraquece o princípio final, apenas
+  documenta a limitação temporária conhecida da estratégia frontend-first.
+- Modified sections: none
 - Removed sections: none
-- Follow-up TODOs: none
+- Follow-up TODOs: revisar esta nota quando a API real substituir o mock
+  (spec de integração futura).
 -->
 
 # Constitution do PokerFlow
@@ -35,6 +37,16 @@ que um participante já votou.
 **Justificativa**: Votação oculta até a revelação simultânea é todo o propósito do
 planning poker — evita viés de ancoragem. Um vazamento, mesmo que parcial, anula o
 propósito do produto.
+
+**Nota sobre a fase mockada**: esta garantia é estrutural apenas quando um
+servidor real guarda os votos e só os libera no reveal. Enquanto a estratégia
+frontend-first com mock (ver CLAUDE.md) estiver em vigor, o sigilo é
+best-effort — tecnicamente qualquer participante poderia inspecionar o
+armazenamento local do próprio navegador e ver votos alheios antes da hora.
+Essa limitação é aceita e documentada explicitamente enquanto não existir API
+real (ver `specs/002-rodada-votacao/research.md`); o Princípio permanece
+inegociável para a versão com backend real, que é quando a garantia passa a
+ser de fato estrutural.
 
 ### III. Entrega Guiada por Spec
 Nenhum código de aplicação é escrito sem uma spec aprovada para aquela
@@ -163,4 +175,4 @@ andamento não são invalidadas retroativamente, mas DEVEM ser revisadas em rela
 tarefas que conflite com um Princípio Fundamental DEVE ser revisado antes de a
 implementação prosseguir.
 
-**Versão**: 1.4.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-15
+**Versão**: 1.4.1 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-15

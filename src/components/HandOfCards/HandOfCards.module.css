@@ -1,0 +1,83 @@
+.mao {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.carta {
+  width: 56px;
+  height: 80px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  perspective: 600px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.carta:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.flipper {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.4s ease;
+  transform: rotateY(0deg);
+  border-radius: 12px;
+}
+
+.carta.selecionada .flipper {
+  transform: rotateY(180deg);
+}
+
+.faceFrente,
+.faceVerso {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  backface-visibility: hidden;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+}
+
+.faceFrente {
+  background: var(--surface-elevated);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+
+.carta:not(:disabled):hover .faceFrente {
+  border-color: var(--accent-a);
+}
+
+.faceVerso {
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  color: #ffffff;
+  border: 1.5px solid transparent;
+  transform: rotateY(180deg);
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.35);
+}
+
+@media (max-width: 480px) {
+  .carta {
+    width: 48px;
+    height: 68px;
+  }
+  .faceFrente,
+  .faceVerso {
+    font-size: 16px;
+  }
+}

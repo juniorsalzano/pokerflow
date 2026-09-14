@@ -19,6 +19,20 @@ export interface Participante {
   entrouEm: number;
 }
 
+export type EstadoRodada = "votando" | "revelada";
+
+/**
+ * Rodada de votação de uma sala (feature 002). `votos` é um único objeto
+ * acessível a todo o código do app — o sigilo do voto (Princípio II) é
+ * responsabilidade da camada de apresentação, que nunca deve renderizar
+ * `votos[outroParticipanteId]` antes de `estado === 'revelada'` (ver
+ * data-model.md §Sigilo e research.md §5).
+ */
+export interface Rodada {
+  estado: EstadoRodada;
+  votos: Record<string, string>;
+}
+
 export interface Sala {
   codigo: string;
   nome: string;
@@ -27,6 +41,7 @@ export interface Sala {
   participantes: Participante[];
   criadaEm: number;
   ultimaAtividadeEm: number;
+  rodada: Rodada;
 }
 
 export interface CriarSalaInput {
@@ -35,7 +50,25 @@ export interface CriarSalaInput {
   escalaPontos: EscalaPontos;
 }
 
-export type ErroRoomClient = "SALA_NAO_ENCONTRADA" | "NOME_DUPLICADO" | "ENTRADA_INVALIDA";
+/** Resumo derivado da rodada revelada (data-model.md §Resumo pós-revelação). Não é persistido. */
+export type ResumoResultado =
+  | { tipo: "consenso"; valor: string }
+  | { tipo: "dispersao"; min: string; max: string }
+  | { tipo: "sem-consenso" };
+
+export interface ResumoRodada {
+  votaram: number;
+  naoVotaram: Participante[];
+  resultado: ResumoResultado;
+}
+
+export type ErroRoomClient =
+  | "SALA_NAO_ENCONTRADA"
+  | "NOME_DUPLICADO"
+  | "ENTRADA_INVALIDA"
+  | "RODADA_JA_REVELADA"
+  | "VALOR_INVALIDO"
+  | "APENAS_MODERADOR";
 
 export class RoomClientError extends Error {
   constructor(

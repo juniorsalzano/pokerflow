@@ -41,7 +41,7 @@ avança pelo fluxo acima.
 | Feature | Status | Pasta |
 |---------|--------|-------|
 | Criar e entrar em uma sala (com escala de pontos) | Implementado (mock) | `specs/001-criar-entrar-sala/` |
-| Rodada de votação (votar, revelar, resetar) | Spec | `specs/002-rodada-votacao/` |
+| Rodada de votação (votar, revelar, resetar) | Tasks | `specs/002-rodada-votacao/` |
 | Chat na sala (ideia, ainda sem spec) | Não iniciado | — |
 
 Status possíveis: `Não iniciado` → `Spec` → `Plan` → `Tasks` → `Implementado`.
@@ -91,3 +91,14 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   opcionais não usadas (Playwright/WebdriverIO/MSW); reavaliar quando
   estabilizar. Não validado automaticamente: sincronização real entre duas
   abas de navegador (precisa ser testado manualmente por um humano).
+- **2026-09-15**: Bug real encontrado na validação manual — identidade de
+  moderador vazava entre abas do mesmo navegador (usava localStorage,
+  compartilhado entre abas; corrigido para sessionStorage). Corrigido via
+  PR mesclado direto em main, com 5 testes novos provando que salas
+  simultâneas (ex.: 5 devs numa sala, 7 em outra) são independentes.
+  Commits passam a seguir Conventional Commits com descrição em português
+  (constitution v1.4.0).
+- **2026-09-15**: Nota adicionada ao Princípio II da constitution (v1.4.1):
+  sigilo do voto é best-effort enquanto a fase mock estiver em vigor (sem
+  servidor real guardando os votos) — decisão consciente, revisar quando a
+  API real existir. Plan da spec 002 documenta essa ressalva.

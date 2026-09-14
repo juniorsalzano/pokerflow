@@ -18,6 +18,12 @@ export interface RoomClient {
   assinarSala(codigo: string, callback: (sala: Sala | null) => void): () => void;
 
   sairDaSala(codigo: string, participanteId: string): Promise<void>;
+
+  votar(codigo: string, participanteId: string, valor: string): Promise<Sala>;
+
+  revelar(codigo: string, participanteId: string): Promise<Sala>;
+
+  resetar(codigo: string, participanteId: string): Promise<Sala>;
 }
 
 export type { Participante, Sala };
