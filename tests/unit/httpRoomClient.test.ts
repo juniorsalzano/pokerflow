@@ -14,7 +14,7 @@ function respostaJson(status: number, corpo: unknown): Response {
 
 beforeEach(() => {
   vi.stubEnv("VITE_API_BASE_URL", BASE_URL);
-  sessionStorage.clear();
+  localStorage.clear();
 });
 
 afterEach(() => {

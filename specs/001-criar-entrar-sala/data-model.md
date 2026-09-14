@@ -47,11 +47,15 @@ modeladas aqui.
 
 - `localStorage["pokerflow:sala:<codigo>"]` → objeto `Sala` serializado
   (fonte da verdade entre abas).
-- `sessionStorage["pokerflow:eu:<codigo>"]` → `{ participanteId, ehModerador }`
-  do usuário desta aba para aquela sala específica — permite que um refresh
-  (F5) reconheça o mesmo participante e, se aplicável, o papel de moderador
-  (FR-010). Deliberadamente **sessionStorage, não localStorage**: precisa
-  sobreviver a F5 na mesma aba, mas NÃO deve ser compartilhado entre abas —
-  do contrário, abrir a mesma sala em uma segunda aba do mesmo navegador
-  reconheceria incorretamente a pessoa como o mesmo participante/moderador
-  da primeira aba (bug encontrado ao validar a feature manualmente).
+- `localStorage["pokerflow:eu:<codigo>"]` → `{ participanteId, ehModerador }`
+  do usuário deste navegador para aquela sala específica — permite que um
+  refresh (F5) **ou fechar a aba e reabrir pelo link depois** reconheçam o
+  mesmo participante e, se aplicável, o papel de moderador (FR-010).
+  Historicamente isso usou `sessionStorage` (só sobrevive a F5, não a
+  fechar a aba) de propósito, para que uma segunda aba da mesma sala no
+  mesmo navegador não fosse reconhecida como o mesmo participante/moderador
+  da primeira. Revertido para `localStorage`: contra o backend real (feature
+  003), fechar/reabrir a aba virava um participante novo de verdade a cada
+  vez — bug real encontrado em uso (não em teste automatizado). Efeito
+  colateral aceito: duas abas da mesma sala no mesmo navegador agora contam
+  como a mesma pessoa, o que é o comportamento correto para um usuário real.

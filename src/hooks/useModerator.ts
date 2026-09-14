@@ -12,21 +12,23 @@ function chave(codigo: string): string {
 }
 
 /**
- * Persiste quem o usuário desta ABA é dentro de uma sala (FR-010).
+ * Persiste quem o usuário deste navegador é dentro de uma sala (FR-010).
  *
- * Usa sessionStorage (não localStorage) de propósito: sessionStorage
- * sobrevive a um F5 na mesma aba (o que FR-010 exige), mas NÃO é
- * compartilhado entre abas diferentes — cada aba nova precisa entrar como
- * um participante próprio, mesmo no mesmo navegador/link. Com localStorage,
- * abrir a mesma sala em uma segunda aba reconheceria incorretamente a
- * pessoa como o mesmo participante (ou moderador) da primeira aba.
+ * Usa localStorage (não sessionStorage): a identidade precisa sobreviver a
+ * fechar a aba e reabrir pelo link da sala depois, não só a um F5. Uma
+ * versão anterior usava sessionStorage para impedir que uma segunda aba do
+ * mesmo navegador fosse reconhecida como o mesmo participante — mas contra
+ * o backend real isso fazia reabrir a sala virar um participante novo de
+ * verdade a cada vez. Efeito colateral aceito: duas abas da mesma sala no
+ * mesmo navegador agora contam como a mesma pessoa (o que é correto — são
+ * a mesma pessoa).
  */
 export function salvarIdentidade(codigo: string, identidade: Identidade): void {
-  sessionStorage.setItem(chave(codigo), JSON.stringify(identidade));
+  localStorage.setItem(chave(codigo), JSON.stringify(identidade));
 }
 
 export function lerIdentidade(codigo: string): Identidade | null {
-  const bruto = sessionStorage.getItem(chave(codigo));
+  const bruto = localStorage.getItem(chave(codigo));
   if (!bruto) return null;
   try {
     return JSON.parse(bruto) as Identidade;
@@ -37,7 +39,8 @@ export function lerIdentidade(codigo: string): Identidade | null {
 
 /**
  * Hook que expõe a identidade local do usuário para uma sala — sobrevive a
- * um F5 porque lê de sessionStorage (FR-010), sem exigir novo login.
+ * fechar/reabrir a aba porque lê de localStorage (FR-010), sem exigir novo
+ * login.
  */
 export function useModerator(codigo: string | undefined) {
   const [identidade, setIdentidade] = useState<Identidade | null>(() =>

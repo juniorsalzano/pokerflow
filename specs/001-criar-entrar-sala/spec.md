@@ -100,9 +100,10 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
 - O que acontece se dois participantes tentarem entrar com o mesmo nome
   exatamente ao mesmo tempo? Apenas o primeiro pedido processado pelo servidor
   deve ser aceito; o segundo recebe a rejeição de nome duplicado (FR-006).
-- O que acontece se o moderador recarregar a página (F5) sem sair da sala?
-  Ele continua reconhecido como moderador da mesma sala (ver FR-010), sem
-  precisar recriar a sala ou perder o controle de revelar/resetar.
+- O que acontece se o moderador recarregar a página (F5), ou fechar a aba e
+  voltar depois pelo link da sala, sem sair da sala? Ele continua
+  reconhecido como moderador da mesma sala (ver FR-010), sem precisar
+  recriar a sala ou perder o controle de revelar/resetar.
 
 ## Requisitos *(obrigatório)*
 
@@ -134,9 +135,11 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
   de haver ou não conexões abertas.
 - **FR-009**: O sistema DEVE informar de forma clara quando um link/código de sala
   não corresponde a nenhuma sala ativa (inexistente ou já expirada).
-- **FR-010**: O sistema DEVE manter o reconhecimento de um participante como
-  moderador da mesma sala após ele recarregar a página, sem exigir que ele
-  entre novamente ou perca a capacidade de revelar/resetar.
+- **FR-010**: O sistema DEVE manter o reconhecimento de um participante (e,
+  se aplicável, seu papel de moderador) na mesma sala tanto após recarregar
+  a página (F5) quanto após fechar a aba e abrir de novo pelo link da sala,
+  sem exigir que ele entre novamente ou perca a capacidade de revelar/
+  resetar.
 - **FR-011**: A interface DEVE ser utilizável em telas de smartphone (layout
   responsivo), já que participantes frequentemente entram pelo celular durante
   a call do time.

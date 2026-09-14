@@ -185,3 +185,19 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   para header é uma migração de contrato nos dois repositórios, não um fix
   pontual, e fica como candidata a uma rodada própria se o time decidir
   priorizar.
+- **2026-09-14**: `httpRoomClient` passou a notificar a própria aba na hora
+  com a `Sala` devolvida por `votar`/`revelar`/`resetar`, em vez de esperar
+  o próximo polling (até 2s) — corrige o "efeito do voto" parecendo lento
+  contra o backend real. 2 testes unit novos.
+- **2026-09-14**: Bug real relatado em uso: fechar a aba e reabrir pelo link
+  da sala fazia o app tratar o moderador/participante como alguém novo
+  (virando um registro novo de verdade contra o backend real). Causa:
+  `useModerator` usava `sessionStorage` de propósito (decisão de
+  2026-09-15 anterior, para que uma segunda aba do mesmo navegador não
+  fosse confundida com o mesmo participante durante testes manuais na fase
+  mock). Revertido para `localStorage` — FR-010 (spec 001) ampliado para
+  cobrir explicitamente "fechar a aba e reabrir pelo link", não só F5.
+  Efeito colateral aceito: duas abas da mesma sala no mesmo navegador agora
+  contam como a mesma pessoa (correto para uso real; testar múltiplos
+  participantes localmente agora exige aba anônima/outro navegador). 60/60
+  testes passando, build limpo.
