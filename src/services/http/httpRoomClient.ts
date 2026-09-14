@@ -190,6 +190,14 @@ export const httpRoomClient: RoomClient = {
     });
   },
 
+  async enviarPresenca(codigo: string, participanteId: string) {
+    const token = identidadeAtual(codigo)?.token ?? "";
+    await chamarApi<void>(`/rooms/${codigo}/heartbeat`, {
+      method: "POST",
+      body: JSON.stringify({ participanteId, token }),
+    });
+  },
+
   async votar(codigo: string, participanteId: string, valor: string) {
     const token = identidadeAtual(codigo)?.token ?? "";
     const bruta = await chamarApi<SalaRedigida>(`/rooms/${codigo}/votos`, {

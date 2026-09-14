@@ -138,6 +138,11 @@ export const mockRoomClient: RoomClient = {
     salvarSala(salaAtualizada);
   },
 
+  // No-op: o mock não tem servidor real nem timeout de conexão a detectar —
+  // a sala só existe enquanto a aba está aberta (localStorage), então não há
+  // "ausência" pra sinalizar (research.md §14, feature 003).
+  async enviarPresenca() {},
+
   async votar(codigo: string, participanteId: string, valor: string) {
     const sala = lerSalaAtual(codigo);
     if (!sala) {

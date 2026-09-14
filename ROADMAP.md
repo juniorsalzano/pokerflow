@@ -217,3 +217,41 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   sala expirar — será resolvido por um mecanismo de heartbeat de presença
   (candidato a spec futura, cross-repo com `my-api`). 60/60 testes
   passando, build e lint limpos.
+- **2026-09-14**: Heartbeat de presença implementado (FR-010/FR-011,
+  especificado via `/speckit-clarify` e planejado via `/speckit-plan` na
+  mesma conversa, resolvendo o efeito colateral do item acima). Decisões
+  fechadas com o usuário: janela de tolerância de 10 minutos sem sinal de
+  presença antes de remover um participante; sinal enviado numa chamada
+  separada do polling de leitura (`POST /rooms/:codigo/heartbeat`, a cada
+  45s), não acoplada aos 2s de leitura, pra não multiplicar a escrita no
+  Postgres; voto em andamento descartado junto da remoção. WebSocket foi
+  considerado e descartado de novo nesta conversa — nem Vercel (funções
+  serverless, sem processo persistente) nem Render free tier (hiberna após
+  ~15min de inatividade) sustentam uma conexão persistente sem custo/infra
+  nova; heartbeat continua sendo o compromisso dentro da restrição de
+  custo zero.
+  - Backend (`my-api`): `registrarPresenca`/`materializarAusentes` no
+    domínio (funções puras); a "materialização" (remoção de ausentes) roda
+    dentro de `withRoom` (com lock de linha), no mesmo ponto onde a
+    expiração de sala já era checada — deliberadamente **não** roda na
+    leitura sem lock (`ler`), pra não arriscar perder uma escrita
+    concorrente; fica precisa o bastante porque qualquer heartbeat de quem
+    ainda está na sala já dispara a poda. Cuidado explícito pra o
+    heartbeat não renovar `ultimaAtividadeEm` da sala (isso faria uma aba
+    esquecida aberta manter a sala viva pra sempre, contra o FR-005).
+  - Frontend (`pokerflow`): hook `usePresenca` (novo), chamado de
+    `RoomPage` enquanto a pessoa é participante da sala; falha isolada de
+    heartbeat é ignorada (só o servidor decide remoção pela ausência
+    repetida).
+  - Testes: 13 novos no `my-api` (10 unit — `registrarPresenca`/
+    `materializarAusentes` — + 3 e2e contra o Postgres real, todos
+    passando; suíte completa do módulo `planning-poker` em 72 testes,
+    unit+e2e) e 6 novos no `pokerflow` (2 em `httpRoomClient`, 4 em
+    `usePresenca`; suíte completa em 66 testes). `security-review` sem
+    achados HIGH/MEDIUM nos dois repositórios — o endpoint novo reaproveita
+    a mesma checagem de `token` já revisada nas features anteriores.
+  - **Pendente de validação manual** (T029/T029a de
+    `specs/003-integracao-backend-real/tasks.md`, mesma natureza dos
+    demais itens manuais desta feature): reconectar dentro da janela de 10
+    minutos e confirmar que passado esse prazo a pessoa precisa entrar de
+    novo — precisa de um humano rodando o app de verdade.

@@ -88,6 +88,30 @@ describe("httpRoomClient — montagem de requisições", () => {
     );
   });
 
+  it("enviarPresenca faz POST /heartbeat com participanteId e token, sem tratar a resposta como Sala", async () => {
+    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await httpRoomClient.enviarPresenca("abc1234", "p1");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${BASE_URL}/rooms/abc1234/heartbeat`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ participanteId: "p1", token: "token-secreto" }),
+      }),
+    );
+  });
+
+  it("uma falha de enviarPresenca (rede ou 401) propaga como erro comum, sem quebrar reconstrução de Sala", async () => {
+    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("network error"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(httpRoomClient.enviarPresenca("abc1234", "p1")).rejects.not.toBeInstanceOf(RoomClientError);
+  });
+
   it("obterSala manda participanteId e token na query quando a identidade existe", async () => {
     salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
     const fetchMock = vi.fn().mockResolvedValue(

@@ -7,6 +7,7 @@ import SeatCard from "../components/SeatCard/SeatCard";
 import ThemeToggle from "../components/ThemeToggle/ThemeToggle";
 import { useJoinRoom } from "../hooks/useJoinRoom";
 import { useModerator } from "../hooks/useModerator";
+import { usePresenca } from "../hooks/usePresenca";
 import { useRodada } from "../hooks/useRodada";
 import { useRoom } from "../hooks/useRoom";
 import { resumoRodada } from "../services/mock/roomStore";
@@ -22,6 +23,8 @@ export default function RoomPage() {
 
   const souParticipante =
     !!identidade && !!sala?.participantes.some((p) => p.id === identidade.participanteId);
+
+  usePresenca(codigo, souParticipante ? identidade?.participanteId : undefined);
 
   async function handleEntrar(nome: string) {
     const resultado = await entrar(nome);

@@ -19,6 +19,9 @@ export interface RoomClient {
 
   sairDaSala(codigo: string, participanteId: string): Promise<void>;
 
+  /** Sinal periódico de presença (FR-010) — mantém o participante ativo na sala. No-op no mock (research.md §14, feature 003). */
+  enviarPresenca(codigo: string, participanteId: string): Promise<void>;
+
   votar(codigo: string, participanteId: string, valor: string): Promise<Sala>;
 
   revelar(codigo: string, participanteId: string): Promise<Sala>;
