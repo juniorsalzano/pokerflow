@@ -41,7 +41,7 @@ avança pelo fluxo acima.
 | Feature | Status | Pasta |
 |---------|--------|-------|
 | Criar e entrar em uma sala (com escala de pontos) | Implementado (mock) | `specs/001-criar-entrar-sala/` |
-| Rodada de votação (votar, revelar, resetar) | Tasks | `specs/002-rodada-votacao/` |
+| Rodada de votação (votar, revelar, resetar) | Implementado (mock) | `specs/002-rodada-votacao/` |
 | Chat na sala (ideia, ainda sem spec) | Não iniciado | — |
 
 Status possíveis: `Não iniciado` → `Spec` → `Plan` → `Tasks` → `Implementado`.
