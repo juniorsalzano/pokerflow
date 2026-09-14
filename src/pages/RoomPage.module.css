@@ -141,6 +141,9 @@
 }
 
 .invite {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
   padding: 10px 18px;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -151,6 +154,10 @@
   cursor: pointer;
   white-space: nowrap;
   transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.invite svg {
+  flex-shrink: 0;
 }
 
 .invite:not(.inviteCopiado):not(.inviteErro):hover {
