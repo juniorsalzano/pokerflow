@@ -158,7 +158,14 @@ export const httpRoomClient: RoomClient = {
   async sairDaSala(codigo: string, participanteId: string) {
     const identidade = identidadeAtual(codigo);
     const query = identidade?.token ? `?token=${encodeURIComponent(identidade.token)}` : "";
-    await chamarApi<void>(`/rooms/${codigo}/participantes/${participanteId}${query}`, { method: "DELETE" });
+    // `keepalive` é essencial aqui: esta chamada é disparada a partir do
+    // handler de `beforeunload` (RoomPage), e navegadores abortam fetches
+    // não-keepalive quando a página está descarregando — sem isso, "sair da
+    // sala" ao fechar a aba vira um no-op silencioso contra o backend real.
+    await chamarApi<void>(`/rooms/${codigo}/participantes/${participanteId}${query}`, {
+      method: "DELETE",
+      keepalive: true,
+    });
   },
 
   async votar(codigo: string, participanteId: string, valor: string) {

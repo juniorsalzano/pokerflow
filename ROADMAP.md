@@ -122,9 +122,9 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   o caráter efêmero do produto. O fluxo Spec Kit continua só neste
   repositório; `my-api` não ganha `.specify/` próprio. Registrado na
   constitution v1.5.0.
-- **2026-09-14**: Feature 003 implementada (36/41 tarefas automatizáveis —
-  os 5 pontos restantes são validação manual com dispositivos/redes reais,
-  ver abaixo). `/speckit-analyze` encontrou um achado **CRITICAL** antes da
+- **2026-09-14**: Feature 003 implementada (39/41 tarefas automatizáveis —
+  os 2 pontos restantes, T029/T032, são validação manual com dispositivos/
+  redes reais, ver abaixo). `/speckit-analyze` encontrou um achado **CRITICAL** antes da
   implementação começar: o desenho original de identidade usava só
   `participanteId` como "prova de posse", mas esse id é devolvido
   publicamente a todo participante da sala — qualquer um conseguiria ler o
@@ -161,3 +161,27 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
     dispositivos/redes diferentes de verdade (SC-001/SC-002). Até essa
     validação acontecer, a feature está "implementada e testada
     automaticamente", não "validada em uso real".
+- **2026-09-14**: Segunda rodada de `code-review` (independente do
+  `security-review` já feito) sobre o diff da feature 003, nos dois
+  repositórios. Achados corrigidos: (1) `my-api` aceitava `nomeSala`/
+  `nomeCriador`/`escalaPontos` sem nenhuma validação de tipo (não há
+  `ValidationPipe` global no módulo) — um valor malformado crashava a rota
+  com 500 em vez do `ENTRADA_INVALIDA`/400 documentado; (2) `projetarSala`
+  no `my-api` não filtrava `rodada.votos` contra os participantes atuais —
+  quem votava e saía da sala continuava contando como "votou" e tinha o
+  voto exposto no reveal, furando o mesmo invariante que `resumoRodada` já
+  garantia; (3) `sairDaSala` no `httpRoomClient` (pokerflow), chamado no
+  `beforeunload` ao fechar a aba, não passava `keepalive: true` — o
+  navegador tende a abortar esse fetch durante o descarregamento da
+  página, tornando "sair da sala ao fechar a aba" um no-op silencioso
+  contra o backend real. Testes novos: 2 unit + 1 e2e no `my-api` (22 e2e
+  no total, todos passando contra o Postgres real); nenhum teste novo no
+  frontend (mudança é um parâmetro de `fetch`, já coberto indiretamente).
+  Dois achados dessa rodada foram deliberadamente **não** corrigidos por
+  não serem bugs: reatribuição de moderador ao sair da sala já está fora
+  de escopo por decisão registrada em `specs/002-rodada-votacao/spec.md`;
+  token secreto como query string em `GET`/`DELETE` é o contrato já
+  documentado em `api-contract.md` e coberto por 21 testes e2e — trocar
+  para header é uma migração de contrato nos dois repositórios, não um fix
+  pontual, e fica como candidata a uma rodada própria se o time decidir
+  priorizar.
