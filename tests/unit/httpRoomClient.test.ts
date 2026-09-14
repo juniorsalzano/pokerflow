@@ -166,6 +166,48 @@ describe("httpRoomClient — reconstrução de votos a partir do payload redigid
   });
 });
 
+describe("httpRoomClient — notificação local imediata (sem esperar o polling)", () => {
+  it("votar notifica um assinante de assinarSala na hora, sem esperar o próximo tick", async () => {
+    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+
+    const respostaInicial = respostaJson(200, {
+      codigo: "abc1234",
+      nome: "Sala",
+      escalaPontos: "fibonacci",
+      moderadorId: "p1",
+      participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
+      criadaEm: 1,
+      ultimaAtividadeEm: 1,
+      rodada: { estado: "votando", votantes: [] },
+    });
+    const respostaAposVotar = respostaJson(200, {
+      codigo: "abc1234",
+      nome: "Sala",
+      escalaPontos: "fibonacci",
+      moderadorId: "p1",
+      participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
+      criadaEm: 1,
+      ultimaAtividadeEm: 2,
+      rodada: { estado: "votando", votantes: ["p1"], meuVoto: "5" },
+    });
+    const fetchMock = vi.fn().mockResolvedValueOnce(respostaInicial).mockResolvedValueOnce(respostaAposVotar);
+    vi.stubGlobal("fetch", fetchMock);
+
+    const callback = vi.fn();
+    const cancelar = httpRoomClient.assinarSala("abc1234", callback);
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
+
+    await httpRoomClient.votar("abc1234", "p1", "5");
+
+    // Nenhum novo fetch de polling rodou ainda (setInterval não disparou) —
+    // a notificação veio direto da resposta de `votar`, não de um novo GET.
+    expect(callback).toHaveBeenCalledTimes(2);
+    expect(callback.mock.calls[1][0]?.rodada.votos["p1"]).toBe("5");
+
+    cancelar();
+  });
+});
+
 describe("httpRoomClient — tratamento de erro (achado E1)", () => {
   it("converte corpo {codigo, mensagem} reconhecido em RoomClientError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(

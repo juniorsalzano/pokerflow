@@ -103,6 +103,21 @@ async function buscarSala(codigo: string): Promise<Sala | null> {
   }
 }
 
+// Assinantes locais (dentro desta mesma aba) por código de sala — mesmo
+// padrão do mockRoomClient. Existe para que `votar`/`revelar`/`resetar`
+// consigam notificar a própria tela na hora (ver `notificarAssinantes`),
+// em vez de depender do próximo tick do polling (até INTERVALO_POLLING_MS
+// de atraso perceptível no "efeito" da própria ação).
+const assinantesPorCodigo = new Map<string, Set<(sala: Sala | null) => void>>();
+const ultimoPayloadPorCodigo = new Map<string, string | null>();
+
+function notificarAssinantes(codigo: string, sala: Sala | null): void {
+  const payload = JSON.stringify(sala);
+  if (payload === ultimoPayloadPorCodigo.get(codigo)) return;
+  ultimoPayloadPorCodigo.set(codigo, payload);
+  assinantesPorCodigo.get(codigo)?.forEach((cb) => cb(sala));
+}
+
 export const httpRoomClient: RoomClient = {
   async criarSala(input: CriarSalaInput) {
     const resposta = await chamarApi<{ codigo: string; participanteId: string; token: string; sala: SalaRedigida }>(
@@ -133,25 +148,33 @@ export const httpRoomClient: RoomClient = {
   },
 
   assinarSala(codigo: string, callback: (sala: Sala | null) => void) {
-    let ultimoPayload: string | null = null;
-    let cancelado = false;
+    if (!assinantesPorCodigo.has(codigo)) {
+      assinantesPorCodigo.set(codigo, new Set());
+    }
+    const assinantes = assinantesPorCodigo.get(codigo)!;
+    assinantes.add(callback);
 
     async function consultar() {
       const sala = await buscarSala(codigo).catch(() => undefined);
-      if (cancelado || sala === undefined) return;
-      const payload = JSON.stringify(sala);
-      if (payload !== ultimoPayload) {
-        ultimoPayload = payload;
-        callback(sala);
-      }
+      // Se a inscrição já foi cancelada (ou outra chamada mais recente já
+      // notificou), o `Set` não contém mais este `callback` — mas a
+      // notificação é sempre para todos os assinantes atuais do código, não
+      // só para quem disparou o `consultar`, então isso é seguro mesmo com
+      // respostas atrasadas chegando fora de ordem.
+      if (sala === undefined) return;
+      notificarAssinantes(codigo, sala);
     }
 
     void consultar();
     const intervalo = setInterval(consultar, INTERVALO_POLLING_MS);
 
     return () => {
-      cancelado = true;
+      assinantes.delete(callback);
       clearInterval(intervalo);
+      if (assinantes.size === 0) {
+        assinantesPorCodigo.delete(codigo);
+        ultimoPayloadPorCodigo.delete(codigo);
+      }
     };
   },
 
@@ -174,7 +197,9 @@ export const httpRoomClient: RoomClient = {
       method: "POST",
       body: JSON.stringify({ participanteId, token, valor }),
     });
-    return reconstruirSala(bruta, participanteId);
+    const sala = reconstruirSala(bruta, participanteId);
+    notificarAssinantes(codigo, sala);
+    return sala;
   },
 
   async revelar(codigo: string, participanteId: string) {
@@ -183,7 +208,9 @@ export const httpRoomClient: RoomClient = {
       method: "POST",
       body: JSON.stringify({ participanteId, token }),
     });
-    return reconstruirSala(bruta, participanteId);
+    const sala = reconstruirSala(bruta, participanteId);
+    notificarAssinantes(codigo, sala);
+    return sala;
   },
 
   async resetar(codigo: string, participanteId: string) {
@@ -192,6 +219,8 @@ export const httpRoomClient: RoomClient = {
       method: "POST",
       body: JSON.stringify({ participanteId, token }),
     });
-    return reconstruirSala(bruta, participanteId);
+    const sala = reconstruirSala(bruta, participanteId);
+    notificarAssinantes(codigo, sala);
+    return sala;
   },
 };
