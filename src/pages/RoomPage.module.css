@@ -107,6 +107,18 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.inviteCopiado {
+  border-color: var(--accent-a);
+  color: var(--accent-a);
+}
+
+.inviteErro {
+  border-color: var(--warn-text);
+  color: var(--warn-text);
+  background: var(--warn-bg);
 }
 
 .body {

@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import ConsensusBadge from "../components/ConsensusBadge/ConsensusBadge";
 import HandOfCards from "../components/HandOfCards/HandOfCards";
@@ -25,6 +26,22 @@ export default function RoomPage() {
     !!identidade && !!sala?.participantes.some((p) => p.id === identidade.participanteId);
 
   usePresenca(codigo, souParticipante ? identidade?.participanteId : undefined);
+
+  const [statusConvite, setStatusConvite] = useState<"idle" | "copiado" | "erro">("idle");
+  const timeoutConviteRef = useRef<ReturnType<typeof setTimeout>>();
+
+  useEffect(() => () => clearTimeout(timeoutConviteRef.current), []);
+
+  async function handleConvidar() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setStatusConvite("copiado");
+    } catch {
+      setStatusConvite("erro");
+    }
+    clearTimeout(timeoutConviteRef.current);
+    timeoutConviteRef.current = setTimeout(() => setStatusConvite("idle"), 2000);
+  }
 
   async function handleEntrar(nome: string) {
     const resultado = await entrar(nome);
@@ -109,10 +126,17 @@ export default function RoomPage() {
         <div className={styles.topActions}>
           <button
             type="button"
-            className={styles.invite}
-            onClick={() => navigator.clipboard?.writeText(window.location.href)}
+            className={`${styles.invite} ${statusConvite === "copiado" ? styles.inviteCopiado : ""} ${
+              statusConvite === "erro" ? styles.inviteErro : ""
+            }`}
+            onClick={handleConvidar}
+            aria-live="polite"
           >
-            Convidar time
+            {statusConvite === "copiado"
+              ? "Link copiado!"
+              : statusConvite === "erro"
+                ? "Não foi possível copiar"
+                : "Convidar time"}
           </button>
           <ThemeToggle />
         </div>
