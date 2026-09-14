@@ -37,6 +37,11 @@ export function lerIdentidade(codigo: string): Identidade | null {
   }
 }
 
+/** Limpa a identidade local ao sair da sala de propósito (US3) — quem reabrir o link depois entra como participante novo. */
+export function limparIdentidade(codigo: string): void {
+  localStorage.removeItem(chave(codigo));
+}
+
 /**
  * Hook que expõe a identidade local do usuário para uma sala — sobrevive a
  * fechar/reabrir a aba porque lê de localStorage (FR-010), sem exigir novo

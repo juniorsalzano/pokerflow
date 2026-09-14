@@ -84,9 +84,10 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
 **Cenários de Aceite**:
 
 1. **Dado** dois participantes em uma sala, **Quando** um deles sai de propósito
-   (ação explícita de sair — ainda não implementada; hoje só existe a sala
-   expirar por inatividade), **Então** o outro participante vê a lista de
-   participantes atualizada em tempo real, sem precisar recarregar a página.
+   (botão "Sair da sala" na barra do topo — implementado em 2026-09-14, sem
+   confirmação, ação de melhor esforço via `roomClient.sairDaSala`), **Então**
+   o outro participante vê a lista de participantes atualizada em tempo real,
+   sem precisar recarregar a página.
 
 > **Nota (2026-09-14)**: fechar a aba (ou perder conexão) deliberadamente
 > **não** remove mais o participante na hora — ver FR-010 e a User Story 3

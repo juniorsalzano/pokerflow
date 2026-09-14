@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import HandOfCards from "../components/HandOfCards/HandOfCards";
 import JoinRoomForm from "../components/JoinRoomForm/JoinRoomForm";
 import RoundControls from "../components/RoundControls/RoundControls";
 import SeatCard from "../components/SeatCard/SeatCard";
 import ThemeToggle from "../components/ThemeToggle/ThemeToggle";
 import { useJoinRoom } from "../hooks/useJoinRoom";
-import { useModerator } from "../hooks/useModerator";
+import { limparIdentidade, useModerator } from "../hooks/useModerator";
 import { usePresenca } from "../hooks/usePresenca";
 import { useRodada } from "../hooks/useRodada";
 import { useRoom } from "../hooks/useRoom";
+import { useSairDaSala } from "../hooks/useSairDaSala";
 import { resumoRodada } from "../services/mock/roomStore";
 import { ESCALAS_PONTOS, ESCALAS_PONTOS_LABEL, ResumoRodada } from "../types/room";
 import styles from "./RoomPage.module.css";
@@ -69,17 +70,47 @@ function IconeConvite({ status }: { status: StatusConvite }) {
   );
 }
 
+/** Ícone de "sair da sala" (porta + seta) — usado num botão só de ícone na topbar. */
+function IconeSair() {
+  return (
+    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M16 17l5-5-5-5M21 12H9"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function RoomPage() {
   const { codigo } = useParams<{ codigo: string }>();
+  const navigate = useNavigate();
   const { sala, carregando } = useRoom(codigo);
   const { identidade, salvarIdentidade } = useModerator(codigo);
   const { entrar, erro, carregando: entrando } = useJoinRoom(codigo ?? "");
   const { votar, revelar, resetar, erro: erroRodada } = useRodada(codigo, identidade?.participanteId);
+  const sairDaSala = useSairDaSala(codigo, identidade?.participanteId);
 
   const souParticipante =
     !!identidade && !!sala?.participantes.some((p) => p.id === identidade.participanteId);
 
   usePresenca(codigo, souParticipante ? identidade?.participanteId : undefined);
+
+  async function handleSair() {
+    await sairDaSala();
+    if (codigo) limparIdentidade(codigo);
+    navigate("/");
+  }
 
   const [statusConvite, setStatusConvite] = useState<StatusConvite>("idle");
   const timeoutConviteRef = useRef<ReturnType<typeof setTimeout>>();
@@ -199,6 +230,15 @@ export default function RoomPage() {
                 : "Convidar time"}
           </button>
           <ThemeToggle />
+          <button
+            type="button"
+            className={styles.sair}
+            onClick={handleSair}
+            title="Sair da sala"
+            aria-label="Sair da sala"
+          >
+            <IconeSair />
+          </button>
         </div>
       </div>
 

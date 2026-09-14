@@ -288,3 +288,12 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
     HTML publicado, testado com 3 abordagens técnicas diferentes; ver
     memória de sessão). Validação final foi feita pelo usuário rodando
     `npm run dev` localmente.
+- **2026-09-14**: Adicionado botão "Sair da sala" (ícone na barra do topo,
+  sem confirmação). Avaliado que **não precisava de spec nova**: o cenário
+  já existia, aprovado, na User Story 3 da spec 001 ("ação explícita de
+  sair — ainda não implementada"), e o `roomClient.sairDaSala` já existia
+  de ponta a ponta (mock, HTTP real, backend, testes) — só faltava o gatilho
+  na UI. Cenário de aceite da spec 001 atualizado para refletir a
+  implementação. O caso de o moderador sair não ganhou lógica nova: já é
+  decisão de escopo registrada na spec 002 (sem reatribuição automática,
+  Revelar/Resetar ficam indisponíveis até o moderador voltar).
