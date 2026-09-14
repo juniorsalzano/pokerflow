@@ -86,6 +86,10 @@ Guia para decisões visuais futuras (animações, cores, microcopy):
 ## Idioma
 
 - Artefatos do Spec Kit (spec.md, plan.md, tasks.md, checklists) → **português (pt-BR)**.
-- Código, nomes de variáveis/arquivos, comentários e commits → **inglês**.
+- Código, nomes de variáveis/arquivos, comentários → **inglês**.
+- **Mensagens de commit**: padrão **Conventional Commits**, com o prefixo em
+  inglês (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`, `style:`,
+  `perf:`, `ci:`, `build:`) e a descrição em **português**. Ex.:
+  `feat: adiciona seletor de escala de pontos`.
 
-(Definido em `.specify/memory/constitution.md`, seção "Documentation Language".)
+(Definido em `.specify/memory/constitution.md`, seção "Idioma da Documentação".)

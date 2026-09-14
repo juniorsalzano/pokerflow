@@ -1,13 +1,11 @@
 <!--
 Sync Impact Report
-- Version change: 1.2.0 → 1.3.0
+- Version change: 1.3.0 → 1.4.0
 - Modified principles: n/a
-- Added principles: VI. Segurança por Padrão e Preparo para Crescer (NÃO
-  NEGOCIÁVEL) — higiene básica de segurança em toda superfície pública,
-  revisão de segurança obrigatória antes de considerar uma feature concluída,
-  e arquitetura limpa (sem construir escala prematura, ver Princípio I).
-- Modified sections: Fluxo de Trabalho — adiciona `security-review` como
-  etapa final do ciclo de vida de cada feature.
+- Modified sections: Idioma da Documentação — mensagens de commit passam a
+  seguir Conventional Commits com descrição em português (prefixo
+  feat/fix/docs/etc. em inglês), revertendo a regra anterior de commit
+  inteiramente em inglês.
 - Removed sections: none
 - Follow-up TODOs: none
 -->
@@ -139,15 +137,19 @@ tocam em comportamento coberto pelos Princípios Fundamentais acima.
 Todos os artefatos do Spec Kit (`spec.md`, `plan.md`, `tasks.md`, checklists,
 perguntas e respostas de clarificação, e esta constitution) DEVEM ser escritos em
 português do Brasil (pt-BR). Código, identificadores (variáveis, funções,
-arquivos, mensagens de commit) e comentários inline no código permanecem em
-inglês, seguindo a convenção padrão de engenharia. Quando um termo não tiver
-equivalente natural em português (ex.: jargão técnico já estabelecido), mantenha
-o termo em inglês.
+arquivos) e comentários inline no código permanecem em inglês, seguindo a
+convenção padrão de engenharia. Quando um termo não tiver equivalente natural
+em português (ex.: jargão técnico já estabelecido), mantenha o termo em inglês.
 
-**Justificativa**: O time se comunica em português; escrever specs e planos em
-português mantém a revisão acessível a todos os stakeholders sem fricção de
-tradução, enquanto o código permanece em inglês para seguir as convenções do
-ecossistema/ferramentas.
+**Mensagens de commit** seguem o padrão **Conventional Commits** — prefixo em
+inglês (`feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `style`, `perf`,
+`ci`, `build`), dois-pontos, e a descrição em português do Brasil. Exemplo:
+`fix: corrige identidade de moderador vazando entre abas`.
+
+**Justificativa**: O time se comunica em português; escrever specs, planos e
+commits em português mantém a revisão acessível a todos os stakeholders sem
+fricção de tradução, enquanto código e o prefixo do commit (convenção de
+ferramentas/ecossistema) permanecem em inglês.
 
 ## Governança
 
@@ -161,4 +163,4 @@ andamento não são invalidadas retroativamente, mas DEVEM ser revisadas em rela
 tarefas que conflite com um Princípio Fundamental DEVE ser revisado antes de a
 implementação prosseguir.
 
-**Versão**: 1.3.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14
+**Versão**: 1.4.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-15
