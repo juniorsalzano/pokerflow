@@ -42,6 +42,7 @@ avança pelo fluxo acima.
 |---------|--------|-------|
 | Criar e entrar em uma sala (com escala de pontos) | Implementado (mock) | `specs/001-criar-entrar-sala/` |
 | Rodada de votação (votar, revelar, resetar) | Implementado (mock) | `specs/002-rodada-votacao/` |
+| Integração com backend real (my-api) | Implementado | `specs/003-integracao-backend-real/` |
 | Chat na sala (ideia, ainda sem spec) | Não iniciado | — |
 
 Status possíveis: `Não iniciado` → `Spec` → `Plan` → `Tasks` → `Implementado`.
@@ -121,3 +122,42 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   o caráter efêmero do produto. O fluxo Spec Kit continua só neste
   repositório; `my-api` não ganha `.specify/` próprio. Registrado na
   constitution v1.5.0.
+- **2026-09-14**: Feature 003 implementada (36/41 tarefas automatizáveis —
+  os 5 pontos restantes são validação manual com dispositivos/redes reais,
+  ver abaixo). `/speckit-analyze` encontrou um achado **CRITICAL** antes da
+  implementação começar: o desenho original de identidade usava só
+  `participanteId` como "prova de posse", mas esse id é devolvido
+  publicamente a todo participante da sala — qualquer um conseguiria ler o
+  voto alheio antes do reveal ou agir como moderador só sabendo o
+  `moderadorId` (também público), violando o Princípio II. Corrigido antes
+  de qualquer código ser escrito: `participanteId` continua público
+  (identifica/exibe), um novo `token` secreto (devolvido uma única vez ao
+  dono) passa a ser exigido em toda ação e na leitura do próprio voto. Uma
+  segunda rodada de `/speckit-analyze` (pedida explicitamente por já ter
+  havido erro na primeira) não achou mais CRITICAL/HIGH, só uma
+  inconsistência média (idempotência de `sairDaSala` no contrato), também
+  corrigida antes de implementar.
+  - Testes: 34 unit + 21 e2e (contra o Postgres real de produção do
+    `my-api`, com limpeza automática das linhas de teste — confirmado 0
+    linhas residuais) no backend; 59 (50 existentes + 9 novos) no frontend.
+    Todos passando; build limpo nos dois repositórios.
+  - Bugs reais encontrados e corrigidos durante a implementação (não pelo
+    `/speckit-analyze`, pelos testes rodando de verdade): `votar`/`revelar`/
+    `resetar` devolviam 201 em vez de 200 (faltava `@HttpCode`); a exclusão
+    de sala expirada era desfeita pelo rollback da própria transação quando
+    a ação em si também dava erro de negócio (ex.: sala expirada + token
+    errado); `useCreateRoom` só tratava `ValidationError` (do mock) e não
+    `RoomClientError "ENTRADA_INVALIDA"` (do backend real) para o mesmo
+    caso de negócio.
+  - `security-review` sem achados HIGH/MEDIUM nos dois repositórios.
+  - Nota do Princípio II (constitution) atualizada: o sigilo do voto deixa
+    de ser best-effort quando `VITE_API_BASE_URL` está configurada
+    (constitution v1.5.1).
+  - **Pendente de validação manual** (não automatizável, precisa de
+    humano com dispositivos/redes reais — T029 e T032 de
+    `specs/003-integracao-backend-real/tasks.md`): queda de conexão do
+    moderador e reconexão dentro da janela de inatividade (US3); os 7
+    passos do `quickstart.md` fim a fim, incluindo pelo menos dois
+    dispositivos/redes diferentes de verdade (SC-001/SC-002). Até essa
+    validação acontecer, a feature está "implementada e testada
+    automaticamente", não "validada em uso real".

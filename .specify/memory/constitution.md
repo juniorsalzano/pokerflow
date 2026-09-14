@@ -1,17 +1,13 @@
 <!--
 Sync Impact Report
-- Version change: 1.4.1 → 1.5.0
-- Modified principles: none redefinidos; nota adicionada ao Princípio I
-  reconhecendo a exceção de persistência abaixo.
-- Modified sections: "Restrições Tecnológicas" — registra que o backend real
-  (feature 003) passa a residir em um repositório já existente e separado
-  (`my-api`, NestJS, fora do controle do Spec Kit deste projeto), como um
-  módulo isolado dedicado ao PokerFlow, sem misturar com os módulos já
-  existentes daquele projeto (auth/users/resume-log); e que a persistência
-  reaproveita o Postgres já provisionado no `my-api` em vez de manter estado
-  só em memória — desvio consciente da regra original de "nenhum banco de
-  dados assumido por padrão", justificado por reaproveitar infraestrutura já
-  paga/gratuita existente em vez de provisionar algo novo.
+- Version change: 1.5.0 → 1.5.1
+- Modified principles: II. Sigilo do Voto É Inegociável — nota da fase
+  mockada atualizada: a feature 003 (backend real) foi implementada, e a
+  garantia passou a ser estrutural de verdade quando `VITE_API_BASE_URL`
+  está configurada (verificado por teste e2e contra Postgres real); o modo
+  mock (fallback/rollback) continua best-effort, sem mudança de
+  comportamento em relação à nota anterior.
+- Modified sections: none
 - Removed sections: none
 - Follow-up TODOs: nenhum.
 -->
@@ -50,15 +46,18 @@ que um participante já votou.
 planning poker — evita viés de ancoragem. Um vazamento, mesmo que parcial, anula o
 propósito do produto.
 
-**Nota sobre a fase mockada**: esta garantia é estrutural apenas quando um
-servidor real guarda os votos e só os libera no reveal. Enquanto a estratégia
-frontend-first com mock (ver CLAUDE.md) estiver em vigor, o sigilo é
-best-effort — tecnicamente qualquer participante poderia inspecionar o
-armazenamento local do próprio navegador e ver votos alheios antes da hora.
-Essa limitação é aceita e documentada explicitamente enquanto não existir API
-real (ver `specs/002-rodada-votacao/research.md`); o Princípio permanece
-inegociável para a versão com backend real, que é quando a garantia passa a
-ser de fato estrutural.
+**Nota sobre a fase mockada (atualizada — feature 003 implementada)**: esta
+garantia passou a ser estrutural de verdade quando o backend real
+(`my-api`, módulo `planning-poker`) está configurado
+(`VITE_API_BASE_URL` definida): o servidor nunca inclui o valor de voto de
+outro participante em nenhuma resposta antes do reveal — verificado por
+teste e2e contra o Postgres real
+(`specs/003-integracao-backend-real/`). Quando `VITE_API_BASE_URL` não está
+definida, o app cai no cliente mockado (`localStorage`, sem servidor real) —
+nesse modo o sigilo continua sendo best-effort, pelo mesmo motivo original
+(tudo roda só no navegador). O mock é mantido de propósito como caminho de
+rollback fácil (ver `quickstart.md` da feature 003), não como o caminho
+padrão de produção.
 
 ### III. Entrega Guiada por Spec
 Nenhum código de aplicação é escrito sem uma spec aprovada para aquela
@@ -224,4 +223,4 @@ andamento não são invalidadas retroativamente, mas DEVEM ser revisadas em rela
 tarefas que conflite com um Princípio Fundamental DEVE ser revisado antes de a
 implementação prosseguir.
 
-**Versão**: 1.5.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14
+**Versão**: 1.5.1 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14
