@@ -108,20 +108,63 @@ polling simples já atende a meta de UX.
 
 ## 6. Identidade de participante sem conta (Princípio IV)
 
-**Decisão**: sem trocas — mesmo modelo do mock. `entrarNaSala`/`criarSala`
-retornam um `participanteId` (UUID) gerado no servidor; o cliente guarda
-esse valor (agora vindo da resposta HTTP, gravado no mesmo
-`sessionStorage` já usado para sobreviver a F5 — feature 001, FR-010) e o
-envia em toda ação subsequente (`votar`, `revelar`, `resetar`, `sair`). O
-servidor valida que o `participanteId` recebido pertence à sala
-(`sala.participantes`) e, para ações de moderador, que é exatamente
-`sala.moderadorId` — sem JWT, sessão ou cookie.
+**Decisão revisada (pós-`/speckit-analyze`, achado D1 — CRITICAL)**: a
+primeira versão desta decisão tratava `participanteId` como se fosse, ao
+mesmo tempo, um identificador público (exibido a todos na lista de
+participantes, e como `sala.moderadorId`) **e** uma credencial secreta
+(usada para liberar `meuVoto`/`revelar`/`resetar`/`sair`). Isso é
+contraditório: se todo mundo na sala já vê o `id` de todo mundo — inclusive
+o `moderadorId` — na resposta normal de `GET /rooms/:codigo`, então
+`participanteId` nunca foi secreto o suficiente para servir de credencial.
+Qualquer participante poderia chamar a API diretamente (curl, devtools) com
+o `id` de outro participante e ler o voto alheio antes do reveal (viola
+FR-004/Princípio II) ou com o `moderadorId` e revelar/resetar sem ser o
+moderador (viola `APENAS_MODERADOR`).
 
-**Racional**: introduzir autenticação de verdade contradiz o Princípio IV
-(sem conta/senha) e não foi pedido por nenhuma spec. O nível de "segurança"
-aqui é o mesmo já aceito no mock (posse do `participanteId` = prova de
-identidade dentro daquela sala) — agora finalmente aplicado do lado do
-servidor, e não mais só na UI.
+**Nova decisão**: separar identidade pública de credencial privada.
+
+- `participanteId` continua público — é o que aparece em
+  `participantes[].id`, `moderadorId`, `votantes`, e serve só para
+  identificar/exibir (chave de lista, badge de moderador, "quem já votou").
+- `entrarNaSala`/`criarSala` passam a devolver **também** um `token`
+  (string aleatória, gerada com o mesmo mecanismo de UUID já usado para
+  `participanteId` — imprevisível o suficiente para servir de segredo,
+  mesmo raciocínio já aplicado a IDs em outras revisões de segurança deste
+  projeto). O `token` é devolvido **uma única vez**, só para o dono, na
+  resposta HTTP de quem criou/entrou — nunca aparece em `participantes[]`
+  nem em nenhuma leitura posterior de `Sala`. O cliente grava
+  `{ participanteId, token, ehModerador }` no mesmo `sessionStorage`
+  já usado para sobreviver a F5 (extensão do formato de `pokerflow:eu:<codigo>`
+  definido em `specs/001-criar-entrar-sala/data-model.md` — a chave e o
+  propósito não mudam, só ganha o campo `token`).
+- Toda ação que hoje só verificava `participanteId` passa a exigir também o
+  `token` correspondente, validado no servidor contra o valor guardado
+  internamente (nunca serializado) na linha da sala:
+  - `votar`, `sair`: `token` precisa bater com o do `participanteId`
+    informado — senão `NAO_AUTORIZADO`.
+  - `revelar`, `resetar`: além de `participanteId === moderadorId`
+    (regra já existente), o `token` também precisa bater — senão
+    `NAO_AUTORIZADO`.
+  - `obterSala` (GET): `token` é **opcional** — se ausente ou não bater,
+    a resposta simplesmente omite `meuVoto` (nenhum erro; só não revela o
+    próprio voto de ninguém que não prove que é o dono). `votantes`,
+    `estado`, `participantes`, `moderadorId` continuam públicos, como já
+    eram (esses nunca precisaram de segredo — só indicam "quem", não "o
+    quê" cada um votou).
+
+**Racional**: continua sem contradizer o Princípio IV (nenhuma conta, senha
+ou e-mail — o `token` é efêmero, ligado só à sessão daquela sala, do mesmo
+jeito que `participanteId` já era) e agora entrega de verdade o que FR-004 e
+o Princípio II exigem: impossível ler o voto ou agir como moderador sem
+possuir um segredo que só o navegador daquela pessoa recebeu uma vez.
+
+**Alternativas consideradas**:
+- *Manter só `participanteId`* (decisão original) — rejeitada: não resiste
+  a inspeção de rede/chamada direta à API, o próprio cenário que o
+  Princípio II lista explicitamente como inaceitável.
+- *JWT/sessão completa* — rejeitada por ser mais do que o problema pede;
+  um valor opaco de posse (mesma filosofia de `participanteId`, só que
+  privado) já resolve, sem introduzir conceito de autenticação real.
 
 ## 7. Validação e sanitização de entrada
 
@@ -182,6 +225,7 @@ controller do módulo, mapeando:
 | `VALOR_INVALIDO` | 400 |
 | `ENTRADA_INVALIDA` | 400 |
 | `APENAS_MODERADOR` | 403 |
+| `NAO_AUTORIZADO` (novo — achado D1) | 401 |
 
 Corpo da resposta de erro: `{ "codigo": "<ErroRoomClient>", "mensagem": "<texto seguro para exibir>" }`
 — mesmo par (código, mensagem) que `RoomClientError` já expõe no mock, só que
@@ -214,7 +258,34 @@ de estados da rodada não pode depender de HTTP nem de TypeORM para ser
 testada, e portar o código quase literalmente reduz risco de introduzir
 regressão em comportamento já certificado (US2 da spec 003).
 
-## 11. CORS
+## 11. Falha temporária de rede/servidor (FR-009/SC-004 — achado E1)
+
+**Decisão**: `httpRoomClient.ts` só lança `RoomClientError` quando a
+resposta HTTP tem corpo `{ codigo, mensagem }` reconhecido (erro de
+negócio). Qualquer outra falha — `fetch` rejeitado (rede indisponível),
+timeout, resposta 5xx sem corpo JSON válido — propaga como um erro comum
+(`Error` simples, **não** `RoomClientError`), sem tentar reescrevê-lo.
+
+**Racional**: os hooks que já existem (`useRodada`, `useJoinRoom`,
+`useCreateRoom` — features 001/002) **já** têm exatamente essa distinção
+implementada: `e instanceof RoomClientError ? e.message : "Não foi possível
+X. Tente novamente."`. Ou seja, o comportamento pedido por FR-009/SC-004
+("falha temporária comunicada de forma clara, distinta de 'sala não
+encontrada', sem recarregar a página") já existe na UI desde 001/002 — só
+não tinha sido conectado a nenhuma fonte real de falha de rede, porque o
+mock nunca falha por rede. Não é necessária nenhuma mudança em hooks/
+componentes; só cuidado em `httpRoomClient.ts` para não "engolir" um erro
+de rede genérico dentro de um `RoomClientError` (o que faria a UI mostrar a
+mensagem errada).
+
+## 12. Concorrência — cobertura de teste (achado E2)
+
+O lock de linha (decisão #3) resolve a concorrência por design, mas precisa
+de um teste e2e que dispare ações em paralelo (`Promise.all` contra o mesmo
+`codigo`) para provar isso na prática, não só na leitura do código — ver
+`tasks.md`, fase de paridade (US2).
+
+## 13. CORS
 
 **Decisão**: nenhuma mudança. `my-api` já roda com `app.enableCors()` sem
 restrição de origem — o frontend do PokerFlow funciona sem configuração

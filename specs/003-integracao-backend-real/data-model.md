@@ -6,6 +6,30 @@ elas vivem (Postgres via TypeORM, no `my-api`) e **como** são lidas/escritas
 (transação com lock de linha), não o formato/regras em si. Ver `research.md`
 §1-3 para as decisões por trás deste desenho.
 
+## Identidade e credencial (revisado — achado D1 do `/speckit-analyze`)
+
+Cada objeto dentro de `participantes` (tanto no armazenamento interno
+quanto no domínio) ganha um campo a mais em relação a `Participante` do
+frontend (`pokerflow/src/types/room.ts`):
+
+| Campo | Presente em... | Regras |
+|---|---|---|
+| `token` | Só na representação **interna** (linha do banco / domínio do `my-api`) | String aleatória gerada no mesmo estilo de `participanteId` (imprevisível). Prova de posse daquele `participanteId`, devolvida **uma única vez** na resposta de `criarSala`/`entrarNaSala`, para o dono. |
+
+**Regra inegociável**: `token` NUNCA aparece em nenhuma resposta de
+`Sala`/`participantes[]`/`GET obterSala` — só é usado internamente pelo
+`PlanningPokerService` para validar `votar`/`sair`/`revelar`/`resetar` e
+para decidir se inclui `meuVoto` num `GET` (research.md §6). A camada de
+serialização HTTP (`contracts/api-contract.md`) projeta cada participante
+sem esse campo antes de responder — ver `research.md` §6 para o racional
+completo (por que a versão anterior desta spec, sem `token`, violava o
+Princípio II).
+
+`sessionStorage["pokerflow:eu:<codigo>"]` (chave já definida em
+`specs/001-criar-entrar-sala/data-model.md`) ganha o campo `token` junto de
+`participanteId`/`ehModerador` — extensão aditiva, não quebra o formato
+original.
+
 ## Tabela `planning_poker_rooms`
 
 Uma linha = uma sala inteira (participantes e rodada incluídos). Nome da
@@ -19,7 +43,7 @@ PokerFlow — não ao site de currículo.
 | `nome` | `varchar(60)` | `Sala.nome` | Sanitizado e validado antes de gravar (mesma lógica de `validation.ts`). |
 | `escala_pontos` | `varchar(20)` | `Sala.escalaPontos` | Um de `'fibonacci' \| 'sequencial' \| 'camisetas'`. Imutável após criação. |
 | `moderador_id` | `varchar(36)` | `Sala.moderadorId` | UUID do participante criador. |
-| `participantes` | `jsonb` | `Sala.participantes` (`Participante[]`) | Array de `{ id, nome, ehModerador, entrouEm }`. |
+| `participantes` | `jsonb` | `Sala.participantes` (`Participante[]`) | Array de `{ id, nome, ehModerador, entrouEm, token }` — **`token` é interno, nunca serializado nas respostas HTTP** (ver "Identidade e credencial" acima). |
 | `rodada` | `jsonb` | `Sala.rodada` | `{ estado: 'votando' \| 'revelada', votos: Record<participanteId, string> }`. |
 | `criada_em` | `timestamptz` | `Sala.criadaEm` | Definido na criação, imutável. |
 | `ultima_atividade_em` | `timestamptz` | `Sala.ultimaAtividadeEm` | Atualizado a cada ação (entrar/sair/votar/revelar/resetar); usado na checagem de expiração preguiçosa (`research.md` §4). |
@@ -49,6 +73,12 @@ regra (Princípio VI):
   `moderador_id`.
 - Votar: rejeitado se `rodada.estado !== 'votando'`.
 
+**Nova regra (achado D1)**: `votar`, `sair`, `revelar`, `resetar` também
+exigem que o `token` recebido bata com o `token` interno do `participanteId`
+informado — senão, `NAO_AUTORIZADO`, independente de qualquer outra
+validação já passar (ver "Identidade e credencial" acima e `research.md`
+§6).
+
 ## Ciclo de vida (sem mudança de comportamento, novo mecanismo de expiração)
 
 ```
@@ -73,5 +103,8 @@ a ser estrutural: o `planning-poker.service.ts` NUNCA inclui
 antes de `rodada.estado === 'revelada'` — o servidor filtra antes de
 serializar, então não há nenhum jeito de um cliente inspecionar rede e ver o
 voto alheio cedo, ao contrário do que era tecnicamente possível inspecionando
-`localStorage` no mock. Ver `contracts/api-contract.md` para o formato exato
+`localStorage` no mock. Isso só é estrutural de verdade **com** a exigência
+de `token` para `meuVoto` (achado D1) — sem ela, bastaria conhecer o
+`participanteId` alheio (público, visível a todos na sala) para pedir o
+voto dele via `GET`. Ver `contracts/api-contract.md` para o formato exato
 da resposta filtrada.

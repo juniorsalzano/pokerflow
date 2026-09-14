@@ -13,8 +13,14 @@ componente muda.
 as rotas abaixo são relativas a essa base, montadas sob o módulo
 `planning-poker` do `my-api` (ex.: `https://my-api.vercel.app/planning-poker`).
 
-**Autenticação**: nenhuma (Princípio IV). Ações que exigem identidade levam
-`participanteId` explicitamente no corpo/query — ver `research.md` §6.
+**Autenticação**: nenhuma conta/senha (Princípio IV). Identidade dentro de
+uma sala é dada por um par `participanteId` (público, identifica/exibe) +
+`token` (secreto, prova posse — devolvido uma única vez em
+`criarSala`/`entrarNaSala`, nunca aparece em nenhuma resposta de `Sala`).
+Toda ação que muta estado exige os dois; `GET` aceita `token` como opcional
+(sem ele, só não revela `meuVoto`). Ver `research.md` §6 (revisado após o
+achado D1 do `/speckit-analyze` — a versão anterior deste contrato usava só
+`participanteId`, que é público e portanto não serve como credencial).
 
 **Content-Type**: `application/json` em todas as requisições e respostas.
 
@@ -34,11 +40,17 @@ Corpo, com o status HTTP correspondente (`research.md` §9):
 | `VALOR_INVALIDO` | 400 |
 | `ENTRADA_INVALIDA` | 400 |
 | `APENAS_MODERADOR` | 403 |
+| `NAO_AUTORIZADO` | 401 |
 
-Falha de rede/servidor indisponível (timeout, 5xx, sem resposta) não usa esse
-formato — `httpRoomClient.ts` trata como uma categoria própria de erro
-("falha temporária", FR-009 da spec) e a UI mostra mensagem de "tente
-novamente", distinta de "sala não encontrada".
+Falha de rede/servidor indisponível (timeout, 5xx, sem resposta, corpo não
+reconhecido) não usa esse formato — `httpRoomClient.ts` **não** deve
+converter isso em `RoomClientError`; deixa propagar como um erro comum. Os
+hooks (`useRodada`, `useJoinRoom`, `useCreateRoom` — já existentes de
+001/002) já distinguem `RoomClientError` (mensagem específica) de qualquer
+outro erro (mensagem genérica "Não foi possível X. Tente novamente."), então
+isso já satisfaz FR-009/SC-004 sem precisar mudar UI/hooks — só é preciso
+não embrulhar a falha de rede como se fosse um erro de negócio
+(`research.md` §11).
 
 ## Formato de `Sala` nas respostas (redação de voto embutida)
 
@@ -90,6 +102,11 @@ presentes por consistência:
   participante nunca chega ao cliente antes do reveal, então não há como
   vazar, mesmo inspecionando a rede.
 
+**`meuVoto` só aparece se o `token` enviado no `GET` bater com o do dono de
+`participanteId`** (achado D1) — sem isso, `participanteId` sozinho (público,
+visível a todos na sala) não basta para ninguém ler o próprio voto de outra
+pessoa.
+
 ## Endpoints
 
 ### `POST /planning-poker/rooms`
@@ -98,7 +115,10 @@ Cria uma sala. `[roomClient.criarSala]`
 
 **Corpo**: `{ "nomeSala": string, "nomeCriador": string, "escalaPontos": "fibonacci" | "sequencial" | "camisetas" }`
 
-**201**: `{ "codigo": string, "participanteId": string, "sala": Sala }`
+**201**: `{ "codigo": string, "participanteId": string, "token": string, "sala": Sala }`
+— `token` é a credencial secreta do criador (moderador), devolvida só aqui;
+o cliente grava `{ participanteId, token, ehModerador: true }` em
+`sessionStorage["pokerflow:eu:<codigo>"]` (achado D1).
 
 **Erros**: `ENTRADA_INVALIDA` (nome de sala/criador vazio ou passa do limite).
 
@@ -110,22 +130,23 @@ Entra em uma sala existente. `[roomClient.entrarNaSala]`
 
 **Corpo**: `{ "nomeParticipante": string }`
 
-**201**: `{ "participanteId": string, "sala": Sala }`
+**201**: `{ "participanteId": string, "token": string, "sala": Sala }`
+— mesma regra de `token` do endpoint de criar sala (achado D1).
 
 **Erros**: `SALA_NAO_ENCONTRADA`, `NOME_DUPLICADO`, `ENTRADA_INVALIDA`.
 
 ---
 
-### `GET /planning-poker/rooms/:codigo?participanteId=<uuid>`
+### `GET /planning-poker/rooms/:codigo?participanteId=<uuid>&token=<secreto>`
 
 Consulta o estado atual da sala. `[roomClient.obterSala]` — também a rota
 usada pelo polling (`research.md` §5).
 
-`participanteId` é **opcional** na query: se omitido, a resposta não inclui
-`rodada.meuVoto` (equivalente a "ninguém votou ainda" do ponto de vista de
-quem pergunta) — usado apenas em cenários sem identidade conhecida ainda;
-na prática, o frontend sempre manda o `participanteId` salvo no
-`sessionStorage` assim que existir.
+`participanteId`/`token` são **opcionais** na query: se ausentes, ou se o
+`token` não bater com o `participanteId` informado, a resposta simplesmente
+**omite `rodada.meuVoto`** — não é um erro (achado D1; `research.md` §6).
+Na prática, o frontend sempre manda os dois, lidos de
+`sessionStorage["pokerflow:eu:<codigo>"]`, assim que existirem.
 
 **200**: `Sala` (formato acima) — ou `null`/404 se não existir.
 
@@ -133,13 +154,15 @@ na prática, o frontend sempre manda o `participanteId` salvo no
 
 ---
 
-### `DELETE /planning-poker/rooms/:codigo/participantes/:participanteId`
+### `DELETE /planning-poker/rooms/:codigo/participantes/:participanteId?token=<secreto>`
 
 Remove um participante da sala. `[roomClient.sairDaSala]`
 
 **204**, sem corpo.
 
-**Erros**: `SALA_NAO_ENCONTRADA`.
+**Erros**: `SALA_NAO_ENCONTRADA`, `NAO_AUTORIZADO` (`token` ausente ou não
+corresponde a `participanteId` — achado D1, evita que qualquer um remova
+qualquer outro só por conhecer o `id` dele).
 
 ---
 
@@ -147,12 +170,14 @@ Remove um participante da sala. `[roomClient.sairDaSala]`
 
 Registra ou substitui o voto do participante. `[roomClient.votar]`
 
-**Corpo**: `{ "participanteId": string, "valor": string }`
+**Corpo**: `{ "participanteId": string, "token": string, "valor": string }`
 
 **200**: `Sala` atualizada (formato acima, do ponto de vista de quem votou —
 `meuVoto` reflete o valor que acabou de registrar).
 
-**Erros**: `SALA_NAO_ENCONTRADA`, `RODADA_JA_REVELADA`, `VALOR_INVALIDO`.
+**Erros**: `SALA_NAO_ENCONTRADA`, `RODADA_JA_REVELADA`, `VALOR_INVALIDO`,
+`NAO_AUTORIZADO` (`token` ausente ou não corresponde a `participanteId` —
+achado D1, evita voto forjado em nome de outro participante).
 
 ---
 
@@ -160,11 +185,14 @@ Registra ou substitui o voto do participante. `[roomClient.votar]`
 
 Revela os votos da rodada atual. `[roomClient.revelar]`
 
-**Corpo**: `{ "participanteId": string }`
+**Corpo**: `{ "participanteId": string, "token": string }`
 
 **200**: `Sala` atualizada, com `rodada.estado === "revelada"` e `votos` completo.
 
-**Erros**: `SALA_NAO_ENCONTRADA`, `APENAS_MODERADOR`.
+**Erros**: `SALA_NAO_ENCONTRADA`, `APENAS_MODERADOR` (`participanteId` não é
+o moderador), `NAO_AUTORIZADO` (`participanteId` é o moderador, mas o
+`token` não bate — achado D1, impede qualquer participante de agir como
+moderador só por conhecer `sala.moderadorId`, que é público).
 
 ---
 
@@ -172,11 +200,12 @@ Revela os votos da rodada atual. `[roomClient.revelar]`
 
 Limpa os votos e volta ao estado `"votando"`. `[roomClient.resetar]`
 
-**Corpo**: `{ "participanteId": string }`
+**Corpo**: `{ "participanteId": string, "token": string }`
 
 **200**: `Sala` atualizada (`rodada.estado === "votando"`, `votantes: []`, sem `votos`).
 
-**Erros**: `SALA_NAO_ENCONTRADA`, `APENAS_MODERADOR`.
+**Erros**: `SALA_NAO_ENCONTRADA`, `APENAS_MODERADOR`, `NAO_AUTORIZADO`
+(mesma regra do endpoint de revelar).
 
 ## Rate limiting
 
