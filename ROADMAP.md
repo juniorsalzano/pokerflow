@@ -255,3 +255,36 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
     demais itens manuais desta feature): reconectar dentro da janela de 10
     minutos e confirmar que passado esse prazo a pessoa precisa entrar de
     novo — precisa de um humano rodando o app de verdade.
+- **2026-09-14**: Ajuste de UX pontual — botão "Convidar time" não dava
+  nenhum retorno visual ao clicar (não parecia ter copiado o link).
+  Adicionado feedback transitório (texto + cor mudam por 2s, com
+  `aria-live`), revertendo pro estado normal depois.
+- **2026-09-14**: Redesign da tela da sala (ajuste visual, sem spec própria
+  por ser evolução incremental de UI já implementada, não uma feature nova).
+  Motivação: cartas e layout ficavam pequenos/apertados, especialmente em
+  telas largas — o container da sala estava travado em `max-width: 420px`
+  mesmo em desktop. Mudanças: layout até 900px em telas largas; cartas da
+  mão de 56×80px → 92×130px; cartas dos participantes de 56×76px → 84×112px;
+  barra do topo fixa com efeito de vidro (blur) e indicador de status
+  ("Votação em andamento" / "Revelado"); contador de participantes.
+  Identidade visual mantida (degradê roxo/rosa, tipografia Space
+  Grotesk/Manrope, sem emoji).
+  - **Retrabalho por causa de deslocamento de layout** (2 rodadas de
+    feedback): a primeira versão fazia o botão "Revelar" sumir do DOM ao
+    revelar a rodada (fazendo "Resetar" pular de lugar) e o badge de
+    consenso aparecer como bloco novo abaixo dos botões (empurrando a
+    lista de participantes). Corrigido: "Revelar" agora fica sempre
+    montado, só desabilitado depois de revelado; o resultado da rodada
+    (consenso/dispersão/sem consenso) saiu do corpo da página e foi pro
+    indicador de status da barra do topo, que tem altura fixa e não
+    depende do conteúdo — estruturalmente não pode mais deslocar nada.
+    Componente `ConsensusBadge` removido (ficou sem uso). Espaçamentos
+    verticais também reduzidos um pouco, pensando em salas com muitos
+    participantes.
+  - **Não validado visualmente por mim** (Claude) antes do commit: não
+    havia `chromium-cli`/Playwright disponíveis neste ambiente pra tirar
+    um screenshot real, e o `claude.ai/Artifacts` não está funcionando no
+    navegador do usuário (motivo ainda não diagnosticado — não é bug no
+    HTML publicado, testado com 3 abordagens técnicas diferentes; ver
+    memória de sessão). Validação final foi feita pelo usuário rodando
+    `npm run dev` localmente.
