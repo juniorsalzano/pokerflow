@@ -4,10 +4,17 @@ Ferramenta de Planning Poker para times Scrum: criar sala, entrar, votar, revela
 
 ## Stack
 
-- Frontend: React + Vite
-- Backend: Node.js
-- Comunicação em tempo real: WebSocket (ou equivalente) para sincronizar estado da sala
-- Sem banco de dados por padrão (estado de sala é efêmero) — só adicionar persistência se uma spec exigir
+- Frontend: React + Vite (este repositório)
+- Backend: NestJS, no repositório separado `my-api` (`/home/junior/projetos/my-api`)
+  — projeto já existente, hospedado na Vercel, compartilhado com outro produto
+  do autor. O PokerFlow vive lá como módulo isolado (ex.: `src/planning-poker/`),
+  sem tocar nos módulos já existentes. Ver `.specify/memory/constitution.md`
+  ("Backend real: repositório `my-api`") para os detalhes da decisão.
+- Comunicação em tempo real: polling HTTP (sem WebSocket persistente — free tier da Vercel)
+- Persistência: reaproveita o Postgres já provisionado em `my-api` (via TypeORM),
+  em tabelas próprias com expiração — não é um banco novo, é uma exceção
+  consciente documentada na constitution. Estado de sala continua efêmero do
+  ponto de vista do produto.
 
 ## Regras do produto
 

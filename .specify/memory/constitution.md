@@ -1,15 +1,19 @@
 <!--
 Sync Impact Report
-- Version change: 1.4.0 → 1.4.1
-- Modified principles: II. Sigilo do Voto É Inegociável — adiciona nota
-  reconhecendo que, durante a fase mockada (sem API real), o sigilo é
-  best-effort e não estruturalmente garantido; a garantia inegociável vale
-  para a versão com backend real. Não enfraquece o princípio final, apenas
-  documenta a limitação temporária conhecida da estratégia frontend-first.
-- Modified sections: none
+- Version change: 1.4.1 → 1.5.0
+- Modified principles: none redefinidos; nota adicionada ao Princípio I
+  reconhecendo a exceção de persistência abaixo.
+- Modified sections: "Restrições Tecnológicas" — registra que o backend real
+  (feature 003) passa a residir em um repositório já existente e separado
+  (`my-api`, NestJS, fora do controle do Spec Kit deste projeto), como um
+  módulo isolado dedicado ao PokerFlow, sem misturar com os módulos já
+  existentes daquele projeto (auth/users/resume-log); e que a persistência
+  reaproveita o Postgres já provisionado no `my-api` em vez de manter estado
+  só em memória — desvio consciente da regra original de "nenhum banco de
+  dados assumido por padrão", justificado por reaproveitar infraestrutura já
+  paga/gratuita existente em vez de provisionar algo novo.
 - Removed sections: none
-- Follow-up TODOs: revisar esta nota quando a API real substituir o mock
-  (spec de integração futura).
+- Follow-up TODOs: nenhum.
 -->
 
 # Constitution do PokerFlow
@@ -26,6 +30,14 @@ atual em vez de generalidade especulativa.
 **Justificativa**: É uma ferramenta pequena resolvendo uma fricção recorrente em
 rituais de refinamento. Scope creep é o maior risco para o projeto nunca ser
 lançado.
+
+**Nota sobre persistência (feature 003)**: a integração com o backend real
+reaproveita um banco Postgres que já existe e já está em uso por outro
+projeto do mesmo autor (`my-api`), em vez de manter o estado da sala só em
+memória. Isso não é scope creep do PokerFlow — nenhuma feature nova de
+produto foi adicionada por causa disso — é uma escolha de infraestrutura que
+reaproveita algo já provisionado em vez de criar algo novo. Ver "Restrições
+Tecnológicas" e `specs/003-integracao-backend-real/`.
 
 ### II. Sigilo do Voto É Inegociável
 O voto de um participante NÃO DEVE ser observável por nenhum outro participante
@@ -125,11 +137,48 @@ se comprovadamente necessário E permanecer 100% dentro do seu free tier; a
 decisão exata do mecanismo (frequência de polling, ou alternativa) é tomada em
 `/speckit-plan`, mas sempre dentro desta restrição.
 
-A infraestrutura DEVE permanecer mínima para a v1 (nenhum banco de dados é
-assumido por padrão; adicionar um apenas quando uma spec exigir persistência
+A infraestrutura DEVE permanecer mínima para a v1: nenhum banco de dados novo
+é assumido por padrão; adicionar um apenas quando uma spec exigir persistência
 além do ciclo de vida de uma sala ativa, e mesmo assim dentro de uma opção
-gratuita). Hospedagem do frontend também deve seguir a mesma restrição de
-custo zero (ex.: Vercel free tier serve tanto o frontend quanto a API).
+gratuita **ou já provisionada** (ver exceção abaixo). Hospedagem do frontend
+também deve seguir a mesma restrição de custo zero.
+
+### Backend real: repositório `my-api` (decisão da feature 003)
+
+O backend HTTP do PokerFlow NÃO é implementado como pasta `api/` dentro deste
+repositório. Ele reside em `my-api`, um projeto NestJS já existente e já
+implantado na Vercel (Hobby), usado por outro produto do mesmo autor
+(currículo/site pessoal — módulos `auth`, `users`, `resume-log`). Decisões
+que isso implica, válidas para toda spec de backend a partir da 003:
+
+- O fluxo Spec Kit (`/speckit-*`) continua rodando **apenas neste
+  repositório** (pokerflow). `my-api` não ganha sua própria pasta
+  `.specify/` — spec/plan/tasks aqui descrevem o contrato e o comportamento
+  esperado da API; a implementação de fato é escrita em `my-api` seguindo
+  esse plano, respeitando as convenções já existentes daquele projeto
+  (NestJS, Jest, ESLint/Prettier próprios) em vez das deste repositório.
+- O código do PokerFlow DEVE viver em um módulo NestJS isolado dentro de
+  `my-api` (ex.: `src/planning-poker/`), sem alterar os módulos existentes
+  (`auth`, `users`, `resume-log`) — minimiza o risco de regressão no produto
+  que já está em produção ali.
+- `my-api` já tem um Postgres provisionado (via TypeORM) para o site de
+  currículo. **Exceção consciente** à regra de "nenhum banco novo por
+  padrão": o estado de sala/rodada/voto do PokerFlow reaproveita esse mesmo
+  banco (tabelas próprias, isoladas por nome/schema do restante do projeto),
+  em vez de manter tudo em memória do processo serverless — que não
+  sobrevive de forma confiável entre invocações/instâncias diferentes na
+  Vercel. Isso não é uma nova despesa de infraestrutura (o banco já existe e
+  já está pago/gratuito para o outro produto); é reaproveitamento, não
+  scope creep. O estado continua efêmero do ponto de vista do produto: linhas
+  de sala/rodada/voto expiram e são descartadas após o período de inatividade
+  (Princípio IV) — não viram histórico permanente nem relatório.
+
+**Justificativa**: reescrever do zero um segundo backend/infra quando já
+existe um projeto Node.js do próprio autor, hospedado no mesmo provedor
+gratuito e com banco já provisionado, seria exatamente o tipo de esforço
+redundante que o Princípio I (YAGNI) pede para evitar. A contrapartida é
+isolamento de código e de dados dentro de `my-api`, para não colocar em risco
+o produto que já roda lá.
 
 ## Fluxo de Trabalho
 
@@ -175,4 +224,4 @@ andamento não são invalidadas retroativamente, mas DEVEM ser revisadas em rela
 tarefas que conflite com um Princípio Fundamental DEVE ser revisado antes de a
 implementação prosseguir.
 
-**Versão**: 1.4.1 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-15
+**Versão**: 1.5.0 | **Ratificada em**: 2026-09-12 | **Última Emenda**: 2026-09-14

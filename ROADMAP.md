@@ -109,3 +109,15 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   100% client-side/mock nesta fase (sem backend para checar auth/injection
   ainda). Fecha o requisito do Princípio VI que ainda estava pendente para
   esta feature.
+- **2026-09-14**: Feature 003 (`integracao-backend-real`) especificada —
+  primeira feature que sai da fase mock. Decisão de arquitetura importante:
+  o backend real NÃO nasce como pasta `api/` neste repositório; ele é
+  implementado em `my-api`, um projeto NestJS já existente do autor (hoje
+  serve o site de currículo, com Postgres via TypeORM), como um módulo
+  isolado (ex.: `src/planning-poker/`), sem tocar nos módulos já existentes.
+  O estado de sala/rodada/voto reaproveita esse Postgres já provisionado
+  (exceção consciente ao "nenhum banco por padrão" do Princípio IV — não é
+  infraestrutura nova, é reaproveitamento), com expiração automática mantendo
+  o caráter efêmero do produto. O fluxo Spec Kit continua só neste
+  repositório; `my-api` não ganha `.specify/` próprio. Registrado na
+  constitution v1.5.0.
