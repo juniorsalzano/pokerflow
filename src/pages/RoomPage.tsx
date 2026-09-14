@@ -1,4 +1,3 @@
-import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 import ConsensusBadge from "../components/ConsensusBadge/ConsensusBadge";
 import HandOfCards from "../components/HandOfCards/HandOfCards";
@@ -11,7 +10,6 @@ import { useModerator } from "../hooks/useModerator";
 import { useRodada } from "../hooks/useRodada";
 import { useRoom } from "../hooks/useRoom";
 import { resumoRodada } from "../services/mock/roomStore";
-import { roomClient } from "../services/roomClient";
 import { ESCALAS_PONTOS, ESCALAS_PONTOS_LABEL } from "../types/room";
 import styles from "./RoomPage.module.css";
 
@@ -24,16 +22,6 @@ export default function RoomPage() {
 
   const souParticipante =
     !!identidade && !!sala?.participantes.some((p) => p.id === identidade.participanteId);
-
-  // Sai da sala ao fechar a aba/navegar embora (US3).
-  useEffect(() => {
-    if (!codigo || !identidade) return;
-    const handler = () => {
-      roomClient.sairDaSala(codigo, identidade.participanteId);
-    };
-    window.addEventListener("beforeunload", handler);
-    return () => window.removeEventListener("beforeunload", handler);
-  }, [codigo, identidade]);
 
   async function handleEntrar(nome: string) {
     const resultado = await entrar(nome);

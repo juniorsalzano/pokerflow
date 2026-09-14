@@ -201,3 +201,19 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   contam como a mesma pessoa (correto para uso real; testar múltiplos
   participantes localmente agora exige aba anônima/outro navegador). 60/60
   testes passando, build limpo.
+- **2026-09-14**: O fix acima não bastou — bug ainda reproduzia. Causa real:
+  `RoomPage` chamava `roomClient.sairDaSala` automaticamente no
+  `beforeunload`, removendo o participante do servidor assim que a aba
+  fechava; ao reabrir, a identidade local existia mas o servidor já não
+  tinha mais aquele participante na sala. Esse comportamento vinha do
+  cenário de aceite da US2 da spec 001 ("fecha a aba" = "sai"), que
+  contradiz a US3 da spec 003 (reconectar dentro da janela de inatividade
+  sem perder o papel de moderador) — a segunda já estava especificada e
+  não implementada corretamente. Removida a chamada automática; sair da
+  sala passa a acontecer só por ação explícita (ainda não implementada na
+  UI) ou pela sala inteira expirar por inatividade. Specs 001 (cenário de
+  aceite da US2) atualizada com nota explicando a mudança. Efeito colateral
+  temporário: quem fecha a aba continua na lista de participantes até a
+  sala expirar — será resolvido por um mecanismo de heartbeat de presença
+  (candidato a spec futura, cross-repo com `my-api`). 60/60 testes
+  passando, build e lint limpos.

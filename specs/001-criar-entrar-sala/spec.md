@@ -83,9 +83,19 @@ uma delas e verificando que a lista de participantes se atualiza para quem ficou
 
 **Cenários de Aceite**:
 
-1. **Dado** dois participantes em uma sala, **Quando** um deles sai (fecha a aba ou
-   perde conexão), **Então** o outro participante vê a lista de participantes
-   atualizada em tempo real, sem precisar recarregar a página.
+1. **Dado** dois participantes em uma sala, **Quando** um deles sai de propósito
+   (ação explícita de sair — ainda não implementada; hoje só existe a sala
+   expirar por inatividade), **Então** o outro participante vê a lista de
+   participantes atualizada em tempo real, sem precisar recarregar a página.
+
+> **Nota (2026-09-14)**: fechar a aba (ou perder conexão) deliberadamente
+> **não** remove mais o participante na hora — ver FR-010 e a User Story 3
+> de `specs/003-integracao-backend-real/spec.md`, que exige o oposto
+> (reconhecer o mesmo participante/moderador ao reabrir, dentro da janela
+> de inatividade). Enquanto isso, alguém que fechou a aba continua
+> aparecendo como presente até a sala inteira expirar. A forma correta de
+> refletir presença real sem quebrar a reconexão é um mecanismo de
+> heartbeat (candidato a spec futura).
 
 ---
 
