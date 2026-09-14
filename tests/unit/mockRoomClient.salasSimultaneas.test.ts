@@ -43,7 +43,7 @@ describe("mockRoomClient — salas simultâneas são independentes", () => {
   });
 
   it("o mesmo nome pode ser usado em duas salas diferentes (unicidade é só dentro da sala)", async () => {
-    const { codigo: codigoA } = await mockRoomClient.criarSala({
+    await mockRoomClient.criarSala({
       nomeSala: "Sala A",
       nomeCriador: "Ana",
       escalaPontos: "fibonacci",
@@ -72,7 +72,7 @@ describe("mockRoomClient — salas simultâneas são independentes", () => {
       escalaPontos: "sequencial",
     });
 
-    const chamadas: Array<ReturnType<typeof Array>> = [];
+    const chamadas: Array<string[] | null> = [];
     const unsubscribe = mockRoomClient.assinarSala(codigoA, (sala) => {
       chamadas.push(sala?.participantes.map((p) => p.nome) ?? null);
     });
