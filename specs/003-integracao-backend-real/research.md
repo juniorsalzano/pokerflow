@@ -310,7 +310,10 @@ imprecisa por horas.
 
 **Decisão**: cada participante ganha um campo `ultimaPresencaEm`
 (timestamp), atualizado por um endpoint novo e dedicado
-(`POST /rooms/:codigo/heartbeat`), chamado pelo frontend a cada 30-60s
+(`POST /rooms/:codigo/heartbeat`), chamado pelo frontend a cada **45s**
+(ponto médio do intervalo de 30-60s cogitado — sem motivo pra ir no
+extremo curto, que gastaria mais requisições à toa, nem no extremo longo,
+que deixaria menos folga dentro da janela de tolerância de 10 minutos)
 enquanto `RoomPage` está montada — **desacoplado** do polling de leitura
 (`GET`, a cada 2s, decisão #5), que continua só lendo. Em toda leitura ou
 ação sobre uma sala (mesmo ponto onde a expiração de 4h já é checada,

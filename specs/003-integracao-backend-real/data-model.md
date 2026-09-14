@@ -84,11 +84,15 @@ validação já passar (ver "Identidade e credencial" acima e `research.md`
 
 ```
 (inexistente) --criar sala--> linha inserida em planning_poker_rooms
-Ativa --participante entra/sai/vota/revela/reseta/heartbeat--> UPDATE da linha (lock de linha, research.md §3)
+Ativa --participante entra/sai/vota/revela/reseta--> UPDATE da linha, ultimaAtividadeEm
+  renovado (lock de linha, research.md §3)
+Ativa --heartbeat (POST /heartbeat)--> UPDATE só de ultimaPresencaEm do participante —
+  NÃO renova ultimaAtividadeEm da sala (FR-005 exige expiração em 4h independente de
+  conexão ativa; research.md §14)
 Ativa --leitura/ação: cada participante com ultimaPresencaEm > 10min--> removido do array
   participantes (e de rodada.votos), moderadorId revogado sem reatribuir se era o moderador
   (FR-011, research.md §14) — a sala em si continua ativa
-Ativa --leitura/ação após 4h sem nenhuma atividade--> tratada como
+Ativa --leitura/ação após 4h sem nenhuma atividade de negócio--> tratada como
   SALA_NAO_ENCONTRADA + linha apagada (DELETE preguiçoso, research.md §4)
 ```
 

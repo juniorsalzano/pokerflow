@@ -157,7 +157,7 @@ Na prática, o frontend sempre manda os dois, lidos de
 ### `POST /planning-poker/rooms/:codigo/heartbeat`
 
 Sinal periódico de presença — mantém o participante na lista ativa.
-`[roomClient.enviarPresenca]` (novo). Chamado pelo frontend a cada 30-60s
+`[roomClient.enviarPresenca]` (novo). Chamado pelo frontend a cada 45s
 enquanto a sala está aberta, **desacoplado** do polling de leitura de
 2s (FR-010, `research.md` §14).
 

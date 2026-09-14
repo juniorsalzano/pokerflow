@@ -58,7 +58,7 @@ envolvidos.
 **Metas de Performance**: mudança de estado visível entre dispositivos
 diferentes em até 5s (SC-002), com polling a cada 2s (`research.md` §5) —
 folga de ~2.5x sobre a meta. Sinal de presença (heartbeat) desacoplado
-desse polling, enviado a cada 30-60s (FR-010); participante ausente por 10
+desse polling, enviado a cada 45s (FR-010); participante ausente por 10
 minutos seguidos é removido da sala (FR-011, `research.md` §14).
 
 **Restrições**: sem WebSocket persistente (free tier Vercel); backend não
@@ -114,7 +114,7 @@ src/
 │       └── httpRoomClient.ts  # NOVO — implementa roomClient via fetch + polling + heartbeat
 ├── hooks/
 │   ├── useSala, useRodada     # sem mudança (consomem roomClient)
-│   └── usePresenca.ts         # NOVO — setInterval de 30-60s chamando enviarPresenca
+│   └── usePresenca.ts         # NOVO — setInterval de 45s chamando enviarPresenca
 └── pages/RoomPage.tsx         # passa a montar usePresenca enquanto a sala está aberta
 
 tests/unit/
