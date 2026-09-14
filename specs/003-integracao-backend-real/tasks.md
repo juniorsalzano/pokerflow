@@ -94,20 +94,32 @@ description: "Lista de tarefas para a feature Integração com Backend Real"
 
 ## Fase 5: História de Usuário 3 - Sala sobrevive a uma queda momentânea do moderador (Prioridade: P3)
 
-**Objetivo**: o papel de moderador e o estado da sala sobrevivem no servidor independentemente do dispositivo de quem criou, incluindo reconexão dentro da janela de inatividade.
+**Objetivo**: o papel de moderador e o estado da sala sobrevivem no servidor independentemente do dispositivo de quem criou, incluindo reconexão dentro da janela de tolerância de presença de 10 minutos (FR-010/FR-011, `research.md` §14 — substitui a dependência original de `beforeunload` no frontend, removida por contradizer esta própria história).
 
-**Teste Independente**: criar sala, simular queda de conexão do moderador, reconsultar a sala a partir de outro cliente/dispositivo e confirmar que o papel de moderador e o estado continuam intactos.
+**Teste Independente**: criar sala, simular queda de conexão do moderador, reconsultar a sala a partir de outro cliente/dispositivo e confirmar que o papel de moderador e o estado continuam intactos dentro de 10 minutos; confirmar que passado esse prazo ele é removido da lista e precisa entrar de novo.
 
 ### Testes para História 3
 
 - [X] T027 [P] [US3] Teste e2e: após `POST /rooms` (moderador) e algumas ações, uma nova consulta `GET /rooms/:codigo?participanteId=<moderadorId>&token=<tokenDoModerador>` (simulando reconexão, com o `token` que o cliente teria guardado) continua retornando o mesmo `moderadorId` e o estado íntegro da sala, independente de qualquer estado local do cliente — em `my-api/test/planning-poker.e2e-spec.ts`
+- [ ] T027a [P] [US3] Teste e2e: `POST /rooms/:codigo/heartbeat` com `participanteId`+`token` válidos atualiza `ultimaPresencaEm` e responde `204`; com `token` ausente/incorreto ou `participanteId` inexistente responde `401 NAO_AUTORIZADO`, sem alterar a sala — em `my-api/test/planning-poker.e2e-spec.ts` (mesmo arquivo de T027)
+- [ ] T027b [P] [US3] Teste e2e: simular um participante com `ultimaPresencaEm` há mais de 10 minutos (mesma técnica de T025 para `ultima_atividade_em` — inserir/atualizar a linha direto via repositório no teste) e confirmar que a próxima leitura (`GET`) ou ação sobre a sala o remove de `participantes` e de `rodada.votos`; se ele era o moderador, `moderadorId` deixa de corresponder a qualquer participante atual (sem reatribuição); a sala em si continua existindo e acessível para os demais — em `my-api/test/planning-poker.e2e-spec.ts` (depende de T027a)
 
 ### Implementação da História 3
 
-- [X] T028 [US3] Confirmar que `useModerator` (`pokerflow/src/hooks/useModerator.ts`, já existente da feature 001) funciona sem alteração de código contra `httpRoomClient`: `participanteId`/`token`/`ehModerador` continuam gravados em `sessionStorage` a partir da resposta de `criarSala`/`entrarNaSala` (T019), sobrevivendo a F5 — tarefa de verificação; se `useModerator` só usa `participanteId`/`ehModerador` e ignora `token`, nenhuma mudança de código é esperada nele (o `token` é lido só por `httpRoomClient`)
-- [ ] T029 [US3] Validar manualmente o cenário de US3 do `quickstart.md` (passo 6 — derrubar a conexão do moderador e reabrir dentro da janela de inatividade) e registrar o resultado
+- [X] T028 [US3] Confirmar que `useModerator` (`pokerflow/src/hooks/useModerator.ts`, já existente da feature 001) funciona sem alteração de código contra `httpRoomClient`: `participanteId`/`token`/`ehModerador` continuam gravados em `localStorage` a partir da resposta de `criarSala`/`entrarNaSala` (T019), sobrevivendo a F5 e a fechar/reabrir a aba — tarefa de verificação; se `useModerator` só usa `participanteId`/`ehModerador` e ignora `token`, nenhuma mudança de código é esperada nele (o `token` é lido só por `httpRoomClient`)
+- [ ] T028a [US3] Estender o domínio (`my-api/src/planning-poker/domain/room.ts`) com `registrarPresenca(sala, participanteId, token, agora)` (atualiza `ultimaPresencaEm` do participante correspondente; mesma validação de `token` de T008b, lança `NAO_AUTORIZADO` se não bater ou o participante não existir) e `materializarAusentes(sala, agora)` (remove do array `participantes`, e do mapa `rodada.votos`, todo participante com `agora - ultimaPresencaEm > LIMITE_PRESENCA_MS` — 10 minutos; se o removido era `moderadorId`, o campo permanece apontando para um id que não existe mais em `participantes`, sem reatribuição, mesma regra já aceita para "moderador sai da sala" — spec 001); também estende `criarSala`/`adicionarParticipante` (T008/T008a) para inicializar `ultimaPresencaEm = entrouEm` (depende de T008, T008a, T008b)
+- [ ] T028b [P] [US3] Testes unitários Jest de `registrarPresenca` (token correto/incorreto/participante inexistente) e `materializarAusentes` (remove só quem passou dos 10min, preserva quem está dentro da janela, revoga `moderadorId` sem reatribuir, remove o voto do removido de `rodada.votos`, não mexe na sala se ninguém está ausente) em `my-api/src/planning-poker/domain/room.spec.ts` (depende de T028a)
+- [ ] T028c [US3] Estender `PlanningPokerRepository.buscarPorCodigo` (`my-api/src/planning-poker/planning-poker.repository.ts`) para chamar `materializarAusentes` logo após ler a linha (mesmo ponto onde `estaExpirada` já é checada — T011), persistindo a remoção (`UPDATE`) só se algo mudou, antes de devolver a sala para o service aplicar a operação pedida (depende de T028a, T011)
+- [ ] T028d [US3] Implementar `PlanningPokerService.registrarPresenca` e a rota `POST /planning-poker/rooms/:codigo/heartbeat` em `planning-poker.controller.ts`/`planning-poker.service.ts`, sem corpo de resposta (`204`), roteada no grupo de rate limit de **leitura** (não o de escrita de negócio — `contracts/api-contract.md`) (depende de T028a, T028c, T013, T018)
+- [ ] T028e [P] [US3] Adicionar `enviarPresenca(codigo, participanteId, token): Promise<void>` à interface `roomClient` em `pokerflow/src/services/roomClient.ts`; implementar como no-op em `pokerflow/src/services/mock/mockRoomClient.ts` (o mock não tem heartbeat — `plan.md`, Estrutura do Projeto)
+- [ ] T028f [US3] Implementar `enviarPresenca` em `pokerflow/src/services/http/httpRoomClient.ts`: `POST .../heartbeat` com `{ participanteId, token }` lidos de `localStorage["pokerflow:eu:<codigo>"]`, tratando `401`/falha de rede silenciosamente (não interrompe a sessão do usuário por um heartbeat perdido — só o servidor decide remoção, pela ausência repetida) (depende de T028e, T019)
+- [ ] T028g [P] [US3] Criar hook `usePresenca(codigo, identidade)` em `pokerflow/src/hooks/usePresenca.ts`: enquanto `codigo`/`identidade` existirem, `setInterval` de 45s chamando `roomClient.enviarPresenca`, limpo no unmount/troca de sala (depende de T028e)
+- [ ] T028h [US3] Montar `usePresenca(codigo, identidade)` em `pokerflow/src/pages/RoomPage.tsx`, enquanto `souParticipante` for verdadeiro (depende de T028g)
+- [ ] T028i [P] [US3] Testes unitários (Vitest): `enviarPresenca` de `httpRoomClient.ts` (montagem da requisição, corpo, e que uma falha de rede não lança) em `pokerflow/tests/unit/httpRoomClient.test.ts`; `usePresenca.ts` (dispara no intervalo configurado, limpa no unmount — fake timers) em `pokerflow/tests/unit/usePresenca.test.ts` (depende de T028f, T028g)
+- [ ] T029 [US3] Validar manualmente o cenário de US3 do `quickstart.md` (passo 6 — derrubar a conexão do moderador e reabrir dentro da janela de tolerância de 10 minutos) e registrar o resultado
+- [ ] T029a [US3] Validar manualmente o passo 7 do `quickstart.md` (ausência além de 10 minutos — participante some da lista, precisa entrar de novo) e registrar o resultado (depende de T029)
 
-**Checkpoint**: as 3 histórias funcionam juntas — sincronização entre dispositivos, paridade de comportamento e resiliência de moderador.
+**Checkpoint**: as 3 histórias funcionam juntas — sincronização entre dispositivos, paridade de comportamento e resiliência de moderador (incluindo lista de participantes precisa via heartbeat).
 
 ---
 
@@ -115,10 +127,12 @@ description: "Lista de tarefas para a feature Integração com Backend Real"
 
 - [X] T030 [P] Rodar `npm test` e `npm run build` em `pokerflow`, confirmando que 100% da suíte Vitest de 001/002 continua passando com `httpRoomClient` sob teste (SC-003)
 - [X] T031 [P] Rodar `npm run test` e `npm run test:e2e` em `my-api`, confirmando toda a suíte Jest do módulo `planning-poker` (unit + e2e)
-- [ ] T032 Executar a validação manual ponta a ponta completa de `specs/003-integracao-backend-real/quickstart.md` (os 7 passos, incluindo pelo menos dois dispositivos/redes reais) e registrar o resultado no `ROADMAP.md`
+- [ ] T032 Executar a validação manual ponta a ponta completa de `specs/003-integracao-backend-real/quickstart.md` (os 8 passos, incluindo pelo menos dois dispositivos/redes reais) e registrar o resultado no `ROADMAP.md`
 - [X] T033 [P] Rodar a skill `security-review` sobre o diff completo desta feature, nos dois repositórios, antes de considerá-la concluída (Princípio VI da constitution); incluir checagem manual de que nenhuma dependência nova (`@nestjs/throttler` incluída) exige plano pago (FR-007, achado E3) e de que nenhum `token` aparece em log/resposta fora do previsto em `contracts/api-contract.md`
 - [X] T034 Revisar as mensagens de erro do módulo `planning-poker` (`SALA_NAO_ENCONTRADA`, `NOME_DUPLICADO`, `RODADA_JA_REVELADA`, `VALOR_INVALIDO`, `APENAS_MODERADOR`, `ENTRADA_INVALIDA`, `NAO_AUTORIZADO`) garantindo que sejam amigáveis e não exponham detalhe técnico (mesma revisão já feita na feature 002)
 - [X] T035 [P] Atualizar `ROADMAP.md` marcando a feature 003 como implementada; revisar a nota do Princípio II da constitution (v1.4.1, "sigilo do voto best-effort na fase mock") confirmando que passou a ser estrutural — registrar isso como uma emenda PATCH/MINOR da constitution
+- [ ] T035a [P] Rodar a skill `security-review` sobre o diff do incremento de heartbeat de presença (T027a-T028i), nos dois repositórios, antes de considerá-lo concluído (Princípio VI); checar em particular que `POST /heartbeat` exige `token` válido (sem bypass) e que ele está mesmo no grupo de rate limit de leitura (T028d), não escrevendo sem limite
+- [ ] T035b [P] Atualizar `ROADMAP.md` registrando a implementação do heartbeat de presença (entrada nova, associada à correção do `beforeunload` já registrada em 2026-09-14)
 
 ---
 
@@ -131,6 +145,7 @@ description: "Lista de tarefas para a feature Integração com Backend Real"
 - **Histórias de Usuário (Fase 3+)**: todas dependem da Fundação
   - US2 depende dos endpoints já existirem (criados em US1) para testar os casos de erro — não é uma dependência de código, é uma dependência de ordem de execução prática
   - US3 depende de `httpRoomClient`/wiring (criados em US1, T019-T023)
+  - O incremento de heartbeat (T027a/T027b, T028a-T028i) depende de US1 completa (T019-T023) e é independente de US2 — pode ser feito a qualquer momento depois da Fundação
 - **Polimento (Fase Final)**: depende de todas as histórias completas
 
 ### Oportunidades de Paralelismo
@@ -139,6 +154,7 @@ description: "Lista de tarefas para a feature Integração com Backend Real"
 - T014/T015/T015a (testes e2e de US1) podem ser escritos em paralelo antes da implementação (T016-T018)
 - T019/T019a/T024 (frontend) e T016-T018 (backend) podem avançar em paralelo depois da Fundação, já que tocam repositórios diferentes — só T023 (wiring final) depende de ambos os lados estarem prontos
 - T025/T026/T026a/T026b (testes de paridade/robustez de US2) podem rodar em paralelo entre si
+- T027a/T027b (testes e2e do heartbeat) podem ser escritos em paralelo antes de T028a-T028d; T028e-T028i (frontend) e T028a-T028d (backend) podem avançar em paralelo entre si depois de T028e existir — só T028h (wiring em `RoomPage`) depende de T028f/T028g prontos
 
 ---
 
@@ -165,5 +181,5 @@ Task: "Criar httpRoomClient.ts (criarSala/entrarNaSala/sairDaSala) em pokerflow/
 1. Fundação → domínio portado e testado, banco/módulo prontos
 2. História 1 (sincronização real) → testar entre dispositivos → demo (MVP!)
 3. História 2 (paridade de comportamento) → testar erros/isolamento → confirma que nada regrediu
-4. História 3 (resiliência do moderador) → testar reconexão → feature 003 concluída
+4. História 3 (resiliência do moderador, incluindo heartbeat de presença T027a-T028i) → testar reconexão dentro e fora da janela de 10 minutos → feature 003 concluída
 5. Polimento (suítes completas, quickstart manual, security-review, ROADMAP/constitution) → pronto para produção
