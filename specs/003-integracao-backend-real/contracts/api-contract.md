@@ -158,9 +158,13 @@ Na prática, o frontend sempre manda os dois, lidos de
 
 Remove um participante da sala. `[roomClient.sairDaSala]`
 
-**204**, sem corpo.
+**204**, sem corpo — **idempotente**: se a sala já não existe (inexistente
+ou expirada), retorna 204 do mesmo jeito, sem erro (mesmo comportamento do
+mock — `sairDaSala` só faz `if (!sala) return;`, sem lançar
+`SALA_NAO_ENCONTRADA`; preservar isso é FR-001). Só há erro quando a sala
+existe mas a credencial não confere:
 
-**Erros**: `SALA_NAO_ENCONTRADA`, `NAO_AUTORIZADO` (`token` ausente ou não
+**Erros**: `NAO_AUTORIZADO` (sala existe, mas `token` ausente ou não
 corresponde a `participanteId` — achado D1, evita que qualquer um remova
 qualquer outro só por conhecer o `id` dele).
 
