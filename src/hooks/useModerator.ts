@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 export interface Identidade {
   participanteId: string;
   ehModerador: boolean;
+  /** Credencial secreta (achado D1, feature 003) — só existe com o backend real; ausente na fase mock. */
+  token?: string;
 }
 
 function chave(codigo: string): string {

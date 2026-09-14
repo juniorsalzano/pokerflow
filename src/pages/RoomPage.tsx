@@ -38,7 +38,11 @@ export default function RoomPage() {
   async function handleEntrar(nome: string) {
     const resultado = await entrar(nome);
     if (resultado) {
-      salvarIdentidade({ participanteId: resultado.participanteId, ehModerador: false });
+      salvarIdentidade({
+        participanteId: resultado.participanteId,
+        ehModerador: false,
+        token: resultado.token,
+      });
     }
   }
 

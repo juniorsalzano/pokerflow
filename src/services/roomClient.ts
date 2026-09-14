@@ -6,12 +6,12 @@ import { CriarSalaInput, Participante, Sala } from "../types/room";
  * uma implementação http/httpRoomClient.ts segue exatamente este contrato.
  */
 export interface RoomClient {
-  criarSala(input: CriarSalaInput): Promise<{ codigo: string; sala: Sala }>;
+  criarSala(input: CriarSalaInput): Promise<{ codigo: string; sala: Sala; token?: string }>;
 
   entrarNaSala(
     codigo: string,
     nomeParticipante: string,
-  ): Promise<{ participanteId: string; sala: Sala }>;
+  ): Promise<{ participanteId: string; sala: Sala; token?: string }>;
 
   obterSala(codigo: string): Promise<Sala | null>;
 
@@ -28,8 +28,10 @@ export interface RoomClient {
 
 export type { Participante, Sala };
 
-// Ponto único de wiring: hoje aponta para o mock; quando a API real existir
-// (Vercel Functions em api/), troca-se apenas esta linha por uma implementação
-// http/httpRoomClient.ts que siga o mesmo contrato — nenhum componente muda.
+// Ponto único de wiring: usa a API real (http/httpRoomClient.ts) quando
+// VITE_API_BASE_URL está definida; senão cai no mock — nenhum componente
+// muda em nenhum dos dois casos (feature 003).
 import { mockRoomClient } from "./mock/mockRoomClient";
-export const roomClient: RoomClient = mockRoomClient;
+import { httpRoomClient } from "./http/httpRoomClient";
+
+export const roomClient: RoomClient = import.meta.env.VITE_API_BASE_URL ? httpRoomClient : mockRoomClient;

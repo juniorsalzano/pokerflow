@@ -7,12 +7,12 @@ export function useJoinRoom(codigo: string) {
   const [carregando, setCarregando] = useState(false);
 
   const entrar = useCallback(
-    async (nomeParticipante: string): Promise<{ participanteId: string } | undefined> => {
+    async (nomeParticipante: string): Promise<{ participanteId: string; token?: string } | undefined> => {
       setErro(null);
       setCarregando(true);
       try {
-        const { participanteId } = await roomClient.entrarNaSala(codigo, nomeParticipante);
-        return { participanteId };
+        const { participanteId, token } = await roomClient.entrarNaSala(codigo, nomeParticipante);
+        return { participanteId, token };
       } catch (e) {
         if (e instanceof RoomClientError) {
           setErro(e.message);

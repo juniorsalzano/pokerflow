@@ -68,7 +68,8 @@ export type ErroRoomClient =
   | "ENTRADA_INVALIDA"
   | "RODADA_JA_REVELADA"
   | "VALOR_INVALIDO"
-  | "APENAS_MODERADOR";
+  | "APENAS_MODERADOR"
+  | "NAO_AUTORIZADO";
 
 export class RoomClientError extends Error {
   constructor(
