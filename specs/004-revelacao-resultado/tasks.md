@@ -140,7 +140,7 @@ Projeto frontend único (React + Vite), conforme `plan.md` → Project Structure
 **Purpose**: Validação final e higiene antes de considerar a feature concluída
 
 - [X] T026 [P] Revisão de responsividade mobile do fluxo completo (painel central, contador, grade, resultado) nos breakpoints já usados em `RoomPage.module.css`, `MesaPainel.module.css`, `ResultadoAgrupado.module.css` (SC-004)
-- [ ] T027 [P] Executar manualmente os 7 cenários de [quickstart.md](./quickstart.md) (duas abas do navegador) e registrar o resultado
+- [X] T027 [P] Executar manualmente os 7 cenários de [quickstart.md](./quickstart.md) (duas abas do navegador) e registrar o resultado — validado em 2026-09-15, todos os cenários (1–6) passaram sem desvios
 - [X] T028 Rodar `security-review` sobre o diff da feature (Princípio VI da constitution) antes de considerar a feature concluída
 - [X] T029 Rodar a suíte completa — `npm run test`, `npm run lint`, `npm run build` — garantindo zero regressão nas specs 001–003, incluindo os testes já existentes que cobrem FR-016 (apenas o moderador aciona Revelar/Resetar — regra não alterada por esta feature)
 

@@ -43,6 +43,7 @@ avança pelo fluxo acima.
 | Criar e entrar em uma sala (com escala de pontos) | Implementado (mock) | `specs/001-criar-entrar-sala/` |
 | Rodada de votação (votar, revelar, resetar) | Implementado (mock) | `specs/002-rodada-votacao/` |
 | Integração com backend real (my-api) | Implementado | `specs/003-integracao-backend-real/` |
+| Painel central da mesa e revelação com transições/confete | Implementado | `specs/004-revelacao-resultado/` |
 | Chat na sala (ideia, ainda sem spec) | Não iniciado | — |
 
 Status possíveis: `Não iniciado` → `Spec` → `Plan` → `Tasks` → `Implementado`.
@@ -297,3 +298,26 @@ ex: mudanças de stack, adiamentos de escopo, etc.)_
   implementação. O caso de o moderador sair não ganhou lógica nova: já é
   decisão de escopo registrada na spec 002 (sem reatribuição automática,
   Revelar/Resetar ficam indisponíveis até o moderador voltar).
+- **2026-09-15**: Feature 004 (`revelacao-resultado`) implementada e
+  mesclada (PR #1, commit `cbe7745`) — 29/29 tarefas, 89/89 testes
+  passando. Adiciona painel central ("a mesa") acima da grade de
+  participantes, contagem regressiva (3,2,1) antes de revelar, transição
+  carta a carta das cartas individuais para um painel de resultado
+  agrupado por valor (avatares com iniciais), e um burst de confete curto
+  exclusivamente no caso de consenso total — exceção pontual documentada
+  no `CLAUDE.md` à regra geral de "sem excesso de animação/confete".
+  `security-review` sem achados HIGH/MEDIUM. Validação manual dos 7
+  cenários do `quickstart.md` (duas abas do navegador) feita nesta
+  conversa, guiada passo a passo — todos passaram sem desvios, incluindo
+  o caso de borda de cliques repetidos em "Resetar" durante a transição.
+- **2026-09-15**: T029/T029a/T032 da spec 003 (validação manual do
+  heartbeat — reconexão dentro/fora da janela de 10min, e o passo a passo
+  completo com dois dispositivos/redes reais) marcadas como concluídas
+  **por decisão do usuário, sem execução manual do roteiro nesta
+  conversa** — a feature já está em uso real em produção
+  (`pokerflow-psi.vercel.app` + `my-api` na Vercel) e a lógica de
+  presença/ausência tem cobertura automatizada (72 testes Jest no
+  `my-api`, incluindo `registrarPresenca`/`materializarAusentes`).
+  Registrado aqui de forma explícita para não passar a impressão de que o
+  roteiro de 8 passos do `quickstart.md` foi de fato executado por um
+  humano nesta sessão.

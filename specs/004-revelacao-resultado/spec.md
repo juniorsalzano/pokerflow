@@ -4,7 +4,7 @@
 
 **Criada em**: 2026-09-15
 
-**Status**: Rascunho
+**Status**: Implementado
 
 **Entrada**: Descrição do usuário: "Melhoria da experiência de revelação de votos na tela da sala (RoomPage). Um novo painel central ('a mesa') passa a existir acima da lista de participantes, que continua em grade/linha como hoje (não em círculo — com muitos participantes um layout circular fica confuso e difícil de ler). Esse painel central troca de conteúdo conforme o momento: durante a votação mostra uma mensagem de status simples; ao clicar em 'Revelar', antes de qualquer carta virar, uma contagem regressiva (3, 2, 1) aparece nele; ao final, as cartas de cada participante viram no lugar, na grade (comportamento equivalente ao já existente na spec 002), com uma textura de verso de carta enquanto ocultas. Pouco depois, essas cartas reveladas se transformam — com uma transição carta a carta, não abrupta — num painel de resultado que ocupa o lugar delas, agrupando os participantes por valor votado (pilha de avatares com iniciais, já que o produto não tem fotos de perfil). Quando o resultado é consenso total, o momento em que o painel de resultado aparece é acompanhado por uma animação curta de confete ('burst'). Ao clicar em 'Resetar', o painel de resultado transiciona de volta para as cartas individuais na grade (carta a carta), e o painel central volta a mostrar o status de votação. Sem mascote/personagem/mensagens decorativas — usa a paleta de cores já definida do PokerFlow. Referências visuais: um gif e alguns prints de outra ferramenta de planning poker, usados só como inspiração de conceito (painel central, contador, verso de carta, confete, resultado agrupado) — não para copiar literalmente cores, mascote ou o exato timing."
 
