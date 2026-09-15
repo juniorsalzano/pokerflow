@@ -50,7 +50,7 @@
 }
 
 .field label,
-.labelEscala {
+.scaleLabel {
   font-size: 13px;
   font-weight: 600;
   color: var(--text);
@@ -71,7 +71,7 @@
   color: var(--text-muted);
 }
 
-.escalas {
+.scales {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
@@ -95,12 +95,12 @@
   background: linear-gradient(135deg, var(--btn-a), var(--btn-b));
 }
 
-.erroCampo {
+.fieldError {
   font-size: 12px;
   color: var(--warn-text);
 }
 
-.erroGeral {
+.generalError {
   font-size: 13px;
   color: var(--warn-text);
   background: var(--warn-bg);

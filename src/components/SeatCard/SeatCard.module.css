@@ -3,13 +3,18 @@
   flex-direction: column;
   align-items: center;
   gap: 11px;
-  width: 96px;
+  /* Shrinks to fit everything in a single line, no scrollbar — never wider
+     than 96px, never narrower than 56px (below that the name doesn't fit). */
+  flex: 1 1 96px;
+  min-width: 56px;
+  max-width: 96px;
 }
 
-.carta {
-  width: 84px;
-  height: 112px;
+.card {
+  width: 100%;
+  aspect-ratio: 84 / 112;
   perspective: 600px;
+  container-type: inline-size;
 }
 
 .flipper {
@@ -21,12 +26,12 @@
   transform: rotateY(0deg);
 }
 
-.carta.revelado .flipper {
+.card.revealed .flipper {
   transform: rotateY(180deg);
 }
 
-.faceVerso,
-.faceFrente {
+.cardBack,
+.cardFront {
   position: absolute;
   inset: 0;
   display: flex;
@@ -36,35 +41,40 @@
   backface-visibility: hidden;
 }
 
-.faceVerso {
+.cardBack {
   background: var(--surface-elevated);
   border: 1.5px dashed var(--border);
 }
 
-.faceFrente {
+.cardFront {
   background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
   color: #ffffff;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 26px;
+  font-size: clamp(14px, 22cqw, 26px);
   transform: rotateY(180deg);
   box-shadow: 0 10px 24px rgba(139, 92, 246, 0.3);
 }
 
-/* vazio: participante ainda não votou — contorno simples, sem verso "de carta". */
-.carta.vazio .faceVerso {
+/* empty: participant hasn't voted yet — simple outline, no "card back". */
+.card.empty .cardBack {
   background: transparent;
   border: 1.5px dashed var(--border);
 }
 
-/* oculto: já votou, mas o valor não é exibido — verso sólido, sinalizando "já votou". */
-.carta.oculto .faceVerso {
-  background: linear-gradient(135deg, var(--surface-elevated), var(--surface));
+/* hidden: has voted, but the value isn't shown — playing-card back texture
+   (diamond pattern), reinforcing the metaphor without revealing anything
+   (FR-003). Signals "already voted" more realistically than a flat area. */
+.card.hidden .cardBack {
+  background-color: var(--surface-elevated);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(139, 92, 246, 0.35) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgba(139, 92, 246, 0.35) 0 2px, transparent 2px 14px);
   border: 1.5px solid var(--accent-a);
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
 }
 
-.versoMarca {
+.backMark {
   width: 20px;
   height: 20px;
   border-radius: 50%;
@@ -72,11 +82,11 @@
   opacity: 0;
 }
 
-.carta.oculto .versoMarca {
+.card.hidden .backMark {
   opacity: 0.55;
 }
 
-.nome {
+.name {
   font-size: 14px;
   font-weight: 600;
   color: var(--text);
@@ -91,11 +101,11 @@
   max-width: 100%;
 }
 
-.nome.souEu {
+.name.isMe {
   color: var(--accent-a);
 }
 
-.naoVotou {
+.notVoted {
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.04em;
@@ -105,17 +115,12 @@
 
 @media (max-width: 640px) {
   .item {
+    flex: 0 0 auto;
     width: 68px;
+    max-width: none;
     gap: 8px;
   }
-  .carta {
-    width: 60px;
-    height: 82px;
-  }
-  .faceFrente {
-    font-size: 18px;
-  }
-  .nome {
+  .name {
     font-size: 12px;
   }
 }

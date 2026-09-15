@@ -2,50 +2,50 @@ import { FormEvent, useState } from "react";
 import styles from "./JoinRoomForm.module.css";
 
 interface JoinRoomFormProps {
-  nomeSala: string;
-  onSubmit: (nome: string) => void;
-  carregando?: boolean;
-  erro?: string | null;
+  roomName: string;
+  onSubmit: (name: string) => void;
+  loading?: boolean;
+  error?: string | null;
 }
 
-export default function JoinRoomForm({ nomeSala, onSubmit, carregando, erro }: JoinRoomFormProps) {
-  const [nome, setNome] = useState("");
-  const [tentouEnviar, setTentouEnviar] = useState(false);
+export default function JoinRoomForm({ roomName, onSubmit, loading, error }: JoinRoomFormProps) {
+  const [name, setName] = useState("");
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
-  const nomeValido = nome.trim().length > 0;
+  const isNameValid = name.trim().length > 0;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setTentouEnviar(true);
-    if (!nomeValido) return;
-    onSubmit(nome);
+    setTriedSubmit(true);
+    if (!isNameValid) return;
+    onSubmit(name);
   }
 
   return (
     <form className={styles.card} onSubmit={handleSubmit} noValidate>
       <p className={styles.eyebrow}>Entrar na sala</p>
-      <h1 className={styles.title}>{nomeSala}</h1>
+      <h1 className={styles.title}>{roomName}</h1>
       <p className={styles.subtitle}>Informe seu nome para entrar — sem cadastro.</p>
 
       <div className={styles.field}>
-        <label htmlFor="nomeParticipante">Seu nome</label>
+        <label htmlFor="participantName">Seu nome</label>
         <input
-          id="nomeParticipante"
+          id="participantName"
           type="text"
           placeholder="Como o time vai te ver"
-          value={nome}
-          onChange={(e) => setNome(e.target.value)}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           maxLength={30}
         />
-        {tentouEnviar && !nomeValido && (
-          <span className={styles.erroCampo}>Informe seu nome.</span>
+        {triedSubmit && !isNameValid && (
+          <span className={styles.fieldError}>Informe seu nome.</span>
         )}
       </div>
 
-      {erro && <p className={styles.erroGeral}>{erro}</p>}
+      {error && <p className={styles.generalError}>{error}</p>}
 
-      <button type="submit" className={styles.cta} disabled={carregando}>
-        {carregando ? "Entrando..." : "Entrar na sala →"}
+      <button type="submit" className={styles.cta} disabled={loading}>
+        {loading ? "Entrando..." : "Entrar na sala →"}
       </button>
     </form>
   );

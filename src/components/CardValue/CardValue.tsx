@@ -1,13 +1,13 @@
 /**
- * Renderiza o valor de uma carta da escala de pontos. O valor "☕" (pausa/
- * incerteza da escala Fibonacci, ver src/types/room.ts) é desenhado como um
- * ícone SVG de xícara (stroke-based, mesmo estilo dos demais ícones do app)
- * em vez do caractere emoji — Identidade Visual do projeto exige "sem emoji
- * decorativo" (CLAUDE.md; research.md §3). O valor "?" continua como texto
- * simples, pois não é emoji.
+ * Renders a point-scale card's value. The "☕" value (Fibonacci scale's
+ * break/uncertainty card, see src/types/room.ts) is drawn as a stroke-based
+ * SVG cup icon (same style as the app's other icons) instead of the emoji
+ * character — the project's Visual Identity requires "no decorative emoji"
+ * (CLAUDE.md; research.md §3). The "?" value stays as plain text, since it
+ * isn't an emoji.
  */
-export default function ValorCarta({ valor }: { valor: string }) {
-  if (valor === "☕") {
+export default function CardValue({ value }: { value: string }) {
+  if (value === "☕") {
     return (
       <svg
         width="1.1em"
@@ -34,5 +34,5 @@ export default function ValorCarta({ valor }: { valor: string }) {
       </svg>
     );
   }
-  return <>{valor}</>;
+  return <>{value}</>;
 }

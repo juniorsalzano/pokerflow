@@ -15,7 +15,7 @@
   right: 24px;
 }
 
-.stageCentralizado {
+.centeredStage {
   width: 100%;
   min-height: 100vh;
   display: flex;
@@ -25,7 +25,7 @@
   background: var(--bg-grad);
 }
 
-.cardMensagem {
+.messageCard {
   max-width: 420px;
   text-align: center;
   background: var(--surface);
@@ -34,14 +34,14 @@
   padding: 32px;
 }
 
-.tituloMensagem {
+.messageTitle {
   font-family: var(--font-display);
   font-size: 20px;
   margin: 0 0 10px;
   color: var(--text);
 }
 
-.mensagem {
+.message {
   font-size: 14px;
   color: var(--text-muted);
   margin: 0;
@@ -68,42 +68,6 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--border);
-}
-
-.status {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-muted);
-  white-space: nowrap;
-}
-
-.statusDot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--accent-a);
-  animation: statusPulse 2s infinite;
-  flex-shrink: 0;
-}
-
-.statusResumo {
-  color: var(--accent-a);
-  font-weight: 700;
-}
-
-@keyframes statusPulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.55);
-  }
-  70% {
-    box-shadow: 0 0 0 8px rgba(139, 92, 246, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(139, 92, 246, 0);
-  }
 }
 
 .brand {
@@ -160,7 +124,7 @@
   flex-shrink: 0;
 }
 
-.sair {
+.leave {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -175,22 +139,22 @@
   transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-.sair:hover {
+.leave:hover {
   border-color: var(--warn-text);
   color: var(--warn-text);
 }
 
-.invite:not(.inviteCopiado):not(.inviteErro):hover {
+.invite:not(.inviteCopied):not(.inviteError):hover {
   border-color: var(--accent-a);
   color: var(--accent-a);
 }
 
-.inviteCopiado {
+.inviteCopied {
   border-color: var(--accent-a);
   color: var(--accent-a);
 }
 
-.inviteErro {
+.inviteError {
   border-color: var(--warn-text);
   color: var(--warn-text);
   background: var(--warn-bg);
@@ -230,7 +194,7 @@
   padding: 3px 11px;
 }
 
-.erroRodada {
+.roundError {
   font-size: 13px;
   color: var(--warn-text);
   background: var(--warn-bg);
@@ -246,21 +210,17 @@
   margin-bottom: 28px;
 }
 
-.assentos {
+.seats {
   list-style: none;
-  margin: 0;
+  margin: 0 0 40px;
   padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 22px;
+  flex-wrap: nowrap;
+  gap: 10px;
   justify-content: center;
 }
 
-.sectionHead + .assentos {
-  margin-bottom: 40px;
-}
-
-.aviso {
+.notice {
   margin-top: 20px;
   font-size: 12px;
   color: var(--text-muted);
@@ -274,12 +234,6 @@
     row-gap: 6px;
     padding: 10px 16px;
     gap: 10px;
-  }
-  .status {
-    order: 3;
-    flex-basis: 100%;
-    justify-content: center;
-    font-size: 11px;
   }
   .roomName {
     font-size: 15px;
@@ -301,13 +255,12 @@
   .sectionHead {
     margin: 20px 0 12px;
   }
-  .sectionHead + .assentos {
-    margin-bottom: 28px;
-  }
   .sectionTitle {
     font-size: 16px;
   }
-  .assentos {
-    gap: 16px;
+  .seats {
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 28px;
   }
 }

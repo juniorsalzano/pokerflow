@@ -1,0 +1,127 @@
+.result {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  animation: resultEnter 0.4s ease;
+}
+
+@keyframes resultEnter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.chart {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  /* Bottom-aligns every column — same effect as a real bar chart: a column
+     with more votes "grows" upward, the value label always sits on the
+     same line at the bottom. */
+  align-items: flex-end;
+  gap: 20px;
+  justify-content: center;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 64px;
+}
+
+.count {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.stack li + li {
+  margin-top: -12px;
+}
+
+.cardValue {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
+  color: #ffffff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  box-shadow: 0 8px 18px rgba(139, 92, 246, 0.3);
+}
+
+.empty {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.notVoted {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+.voteAgain {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 24px;
+  border: none;
+  border-radius: 12px;
+  color: var(--btn-text);
+  background: linear-gradient(135deg, var(--btn-a), var(--btn-b));
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 14px 28px rgba(124, 58, 237, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.voteAgain:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 32px rgba(124, 58, 237, 0.45);
+}
+
+@media (max-width: 640px) {
+  .chart {
+    gap: 14px;
+  }
+  .column {
+    min-width: 52px;
+  }
+  .cardValue {
+    min-width: 34px;
+    height: 34px;
+    font-size: 14px;
+  }
+}

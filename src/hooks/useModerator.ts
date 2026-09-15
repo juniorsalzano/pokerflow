@@ -1,70 +1,70 @@
 import { useEffect, useState } from "react";
 
-export interface Identidade {
-  participanteId: string;
-  ehModerador: boolean;
-  /** Credencial secreta (achado D1, feature 003) — só existe com o backend real; ausente na fase mock. */
+export interface Identity {
+  participantId: string;
+  isModerator: boolean;
+  /** Secret credential (finding D1, feature 003) — only exists with the real backend; absent in the mock phase. */
   token?: string;
 }
 
-function chave(codigo: string): string {
-  return `pokerflow:eu:${codigo}`;
+function storageKey(code: string): string {
+  return `pokerflow:me:${code}`;
 }
 
 /**
- * Persiste quem o usuário deste navegador é dentro de uma sala (FR-010).
+ * Persists who this browser's user is within a room (FR-010).
  *
- * Usa localStorage (não sessionStorage): a identidade precisa sobreviver a
- * fechar a aba e reabrir pelo link da sala depois, não só a um F5. Uma
- * versão anterior usava sessionStorage para impedir que uma segunda aba do
- * mesmo navegador fosse reconhecida como o mesmo participante — mas contra
- * o backend real isso fazia reabrir a sala virar um participante novo de
- * verdade a cada vez. Efeito colateral aceito: duas abas da mesma sala no
- * mesmo navegador agora contam como a mesma pessoa (o que é correto — são
- * a mesma pessoa).
+ * Uses localStorage (not sessionStorage): the identity needs to survive
+ * closing the tab and reopening it via the room link later, not just an F5.
+ * An earlier version used sessionStorage to prevent a second tab in the
+ * same browser from being recognized as the same participant — but against
+ * the real backend this made reopening the room turn into a genuinely new
+ * participant every time. Accepted trade-off: two tabs of the same room in
+ * the same browser now count as the same person (which is correct — they
+ * are the same person).
  */
-export function salvarIdentidade(codigo: string, identidade: Identidade): void {
-  localStorage.setItem(chave(codigo), JSON.stringify(identidade));
+export function saveIdentity(code: string, identity: Identity): void {
+  localStorage.setItem(storageKey(code), JSON.stringify(identity));
 }
 
-export function lerIdentidade(codigo: string): Identidade | null {
-  const bruto = localStorage.getItem(chave(codigo));
-  if (!bruto) return null;
+export function readIdentity(code: string): Identity | null {
+  const raw = localStorage.getItem(storageKey(code));
+  if (!raw) return null;
   try {
-    return JSON.parse(bruto) as Identidade;
+    return JSON.parse(raw) as Identity;
   } catch {
     return null;
   }
 }
 
-/** Limpa a identidade local ao sair da sala de propósito (US3) — quem reabrir o link depois entra como participante novo. */
-export function limparIdentidade(codigo: string): void {
-  localStorage.removeItem(chave(codigo));
+/** Clears the local identity when deliberately leaving the room (US3) — whoever reopens the link afterward joins as a new participant. */
+export function clearIdentity(code: string): void {
+  localStorage.removeItem(storageKey(code));
 }
 
 /**
- * Hook que expõe a identidade local do usuário para uma sala — sobrevive a
- * fechar/reabrir a aba porque lê de localStorage (FR-010), sem exigir novo
- * login.
+ * Hook exposing the user's local identity for a room — survives
+ * closing/reopening the tab because it reads from localStorage (FR-010),
+ * without requiring a new login.
  */
-export function useModerator(codigo: string | undefined) {
-  const [identidade, setIdentidade] = useState<Identidade | null>(() =>
-    codigo ? lerIdentidade(codigo) : null,
+export function useModerator(code: string | undefined) {
+  const [identity, setIdentity] = useState<Identity | null>(() =>
+    code ? readIdentity(code) : null,
   );
 
   useEffect(() => {
-    if (codigo) {
-      setIdentidade(lerIdentidade(codigo));
+    if (code) {
+      setIdentity(readIdentity(code));
     }
-  }, [codigo]);
+  }, [code]);
 
   return {
-    identidade,
-    ehModerador: identidade?.ehModerador ?? false,
-    salvarIdentidade: (nova: Identidade) => {
-      if (!codigo) return;
-      salvarIdentidade(codigo, nova);
-      setIdentidade(nova);
+    identity,
+    isModerator: identity?.isModerator ?? false,
+    saveIdentity: (next: Identity) => {
+      if (!code) return;
+      saveIdentity(code, next);
+      setIdentity(next);
     },
   };
 }

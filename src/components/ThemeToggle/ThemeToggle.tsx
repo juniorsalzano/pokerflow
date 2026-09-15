@@ -1,21 +1,21 @@
 import { useTheme } from "../../hooks/useTheme";
 import styles from "./ThemeToggle.module.css";
 
-/** Alternância de tema claro/escuro (T036), persistida via useTheme. */
+/** Light/dark theme toggle (T036), persisted via useTheme. */
 export default function ThemeToggle() {
-  const { tema, alternar } = useTheme();
-  const escuro = tema === "dark";
+  const { theme, toggle } = useTheme();
+  const dark = theme === "dark";
 
   return (
     <button
       type="button"
       className={styles.toggle}
-      onClick={alternar}
-      aria-label={escuro ? "Mudar para tema claro" : "Mudar para tema escuro"}
-      aria-pressed={escuro}
+      onClick={toggle}
+      aria-label={dark ? "Mudar para tema claro" : "Mudar para tema escuro"}
+      aria-pressed={dark}
     >
-      <span className={styles.thumb} style={{ marginLeft: escuro ? 24 : 0 }}>
-        {escuro && (
+      <span className={styles.thumb} style={{ marginLeft: dark ? 24 : 0 }}>
+        {dark && (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path
               d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"

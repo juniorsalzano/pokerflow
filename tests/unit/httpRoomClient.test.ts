@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { httpRoomClient } from "../../src/services/http/httpRoomClient";
-import { salvarIdentidade } from "../../src/hooks/useModerator";
+import { saveIdentity } from "../../src/hooks/useModerator";
 import { RoomClientError } from "../../src/types/room";
 
 const BASE_URL = "http://localhost:3000/planning-poker";
 
-function respostaJson(status: number, corpo: unknown): Response {
-  return new Response(JSON.stringify(corpo), {
+function jsonResponse(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
   });
@@ -24,114 +24,114 @@ afterEach(() => {
 });
 
 describe("httpRoomClient — montagem de requisições", () => {
-  it("criarSala faz POST /rooms com o corpo certo e devolve token", async () => {
+  it("createRoom faz POST /rooms com o corpo certo e devolve token", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(201, {
-        codigo: "abc1234",
-        participanteId: "p1",
+      jsonResponse(201, {
+        code: "abc1234",
+        participantId: "p1",
         token: "token-secreto",
-        sala: {
-          codigo: "abc1234",
-          nome: "Sala",
-          escalaPontos: "fibonacci",
-          moderadorId: "p1",
-          participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
-          criadaEm: 1,
-          ultimaAtividadeEm: 1,
-          rodada: { estado: "votando", votantes: [] },
+        room: {
+          code: "abc1234",
+          name: "Sala",
+          pointScale: "fibonacci",
+          moderatorId: "p1",
+          participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+          createdAt: 1,
+          lastActivityAt: 1,
+          round: { state: "voting", voters: [] },
         },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const resultado = await httpRoomClient.criarSala({
-      nomeSala: "Sala",
-      nomeCriador: "Ana",
-      escalaPontos: "fibonacci",
+    const result = await httpRoomClient.createRoom({
+      roomName: "Sala",
+      creatorName: "Ana",
+      pointScale: "fibonacci",
     });
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${BASE_URL}/rooms`,
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ nomeSala: "Sala", nomeCriador: "Ana", escalaPontos: "fibonacci" }),
+        body: JSON.stringify({ roomName: "Sala", creatorName: "Ana", pointScale: "fibonacci" }),
       }),
     );
-    expect(resultado.token).toBe("token-secreto");
-    expect(resultado.codigo).toBe("abc1234");
+    expect(result.token).toBe("token-secreto");
+    expect(result.code).toBe("abc1234");
   });
 
-  it("votar envia participanteId, token e valor no corpo", async () => {
-    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+  it("vote envia participantId, token e value no corpo", async () => {
+    saveIdentity("abc1234", { participantId: "p1", isModerator: true, token: "token-secreto" });
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(200, {
-        codigo: "abc1234",
-        nome: "Sala",
-        escalaPontos: "fibonacci",
-        moderadorId: "p1",
-        participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
-        criadaEm: 1,
-        ultimaAtividadeEm: 1,
-        rodada: { estado: "votando", votantes: ["p1"], meuVoto: "5" },
+      jsonResponse(200, {
+        code: "abc1234",
+        name: "Sala",
+        pointScale: "fibonacci",
+        moderatorId: "p1",
+        participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+        createdAt: 1,
+        lastActivityAt: 1,
+        round: { state: "voting", voters: ["p1"], myVote: "5" },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await httpRoomClient.votar("abc1234", "p1", "5");
+    await httpRoomClient.vote("abc1234", "p1", "5");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${BASE_URL}/rooms/abc1234/votos`,
+      `${BASE_URL}/rooms/abc1234/votes`,
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ participanteId: "p1", token: "token-secreto", valor: "5" }),
+        body: JSON.stringify({ participantId: "p1", token: "token-secreto", value: "5" }),
       }),
     );
   });
 
-  it("enviarPresenca faz POST /heartbeat com participanteId e token, sem tratar a resposta como Sala", async () => {
-    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+  it("sendHeartbeat faz POST /heartbeat com participantId e token, sem tratar a resposta como Room", async () => {
+    saveIdentity("abc1234", { participantId: "p1", isModerator: true, token: "token-secreto" });
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    await httpRoomClient.enviarPresenca("abc1234", "p1");
+    await httpRoomClient.sendHeartbeat("abc1234", "p1");
 
     expect(fetchMock).toHaveBeenCalledWith(
       `${BASE_URL}/rooms/abc1234/heartbeat`,
       expect.objectContaining({
         method: "POST",
-        body: JSON.stringify({ participanteId: "p1", token: "token-secreto" }),
+        body: JSON.stringify({ participantId: "p1", token: "token-secreto" }),
       }),
     );
   });
 
-  it("uma falha de enviarPresenca (rede ou 401) propaga como erro comum, sem quebrar reconstrução de Sala", async () => {
-    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+  it("uma falha de sendHeartbeat (rede ou 401) propaga como erro comum, sem quebrar reconstrução de Room", async () => {
+    saveIdentity("abc1234", { participantId: "p1", isModerator: true, token: "token-secreto" });
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("network error"));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(httpRoomClient.enviarPresenca("abc1234", "p1")).rejects.not.toBeInstanceOf(RoomClientError);
+    await expect(httpRoomClient.sendHeartbeat("abc1234", "p1")).rejects.not.toBeInstanceOf(RoomClientError);
   });
 
-  it("obterSala manda participanteId e token na query quando a identidade existe", async () => {
-    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+  it("getRoom manda participantId e token na query quando a identidade existe", async () => {
+    saveIdentity("abc1234", { participantId: "p1", isModerator: true, token: "token-secreto" });
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(200, {
-        codigo: "abc1234",
-        nome: "Sala",
-        escalaPontos: "fibonacci",
-        moderadorId: "p1",
-        participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
-        criadaEm: 1,
-        ultimaAtividadeEm: 1,
-        rodada: { estado: "votando", votantes: [] },
+      jsonResponse(200, {
+        code: "abc1234",
+        name: "Sala",
+        pointScale: "fibonacci",
+        moderatorId: "p1",
+        participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+        createdAt: 1,
+        lastActivityAt: 1,
+        round: { state: "voting", voters: [] },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await httpRoomClient.obterSala("abc1234");
+    await httpRoomClient.getRoom("abc1234");
 
     expect(fetchMock).toHaveBeenCalledWith(
-      `${BASE_URL}/rooms/abc1234?participanteId=p1&token=token-secreto`,
+      `${BASE_URL}/rooms/abc1234?participantId=p1&token=token-secreto`,
       expect.anything(),
     );
   });
@@ -139,142 +139,142 @@ describe("httpRoomClient — montagem de requisições", () => {
 
 describe("httpRoomClient — reconstrução de votos a partir do payload redigido", () => {
   it("usa o valor real só para o próprio voto; placeholder não-vazio para os demais, antes do reveal", async () => {
-    salvarIdentidade("abc1234", { participanteId: "eu", ehModerador: false, token: "meu-token" });
+    saveIdentity("abc1234", { participantId: "eu", isModerator: false, token: "meu-token" });
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(200, {
-        codigo: "abc1234",
-        nome: "Sala",
-        escalaPontos: "fibonacci",
-        moderadorId: "outro",
-        participantes: [
-          { id: "eu", nome: "Eu", ehModerador: false, entrouEm: 1 },
-          { id: "outro", nome: "Outro", ehModerador: true, entrouEm: 1 },
+      jsonResponse(200, {
+        code: "abc1234",
+        name: "Sala",
+        pointScale: "fibonacci",
+        moderatorId: "outro",
+        participants: [
+          { id: "eu", name: "Eu", isModerator: false, joinedAt: 1 },
+          { id: "outro", name: "Outro", isModerator: true, joinedAt: 1 },
         ],
-        criadaEm: 1,
-        ultimaAtividadeEm: 1,
-        rodada: { estado: "votando", votantes: ["eu", "outro"], meuVoto: "5" },
+        createdAt: 1,
+        lastActivityAt: 1,
+        round: { state: "voting", voters: ["eu", "outro"], myVote: "5" },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const sala = await httpRoomClient.obterSala("abc1234");
+    const room = await httpRoomClient.getRoom("abc1234");
 
-    expect(sala?.rodada.votos["eu"]).toBe("5");
+    expect(room?.round.votes["eu"]).toBe("5");
     // O servidor nunca incluiu o valor real de "outro" no payload (mock acima só
-    // tem meuVoto) — o placeholder é só pra manter "já votou" visível no SeatCard.
-    expect(sala?.rodada.votos["outro"]).toBeDefined();
-    expect(sala?.rodada.votos["outro"]).not.toBe("5");
+    // tem myVote) — o placeholder é só pra manter "já votou" visível no SeatCard.
+    expect(room?.round.votes["outro"]).toBeDefined();
+    expect(room?.round.votes["outro"]).not.toBe("5");
   });
 
   it("usa o mapa completo de votos quando a rodada foi revelada", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(200, {
-        codigo: "abc1234",
-        nome: "Sala",
-        escalaPontos: "fibonacci",
-        moderadorId: "p1",
-        participantes: [
-          { id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 },
-          { id: "p2", nome: "Bia", ehModerador: false, entrouEm: 1 },
+      jsonResponse(200, {
+        code: "abc1234",
+        name: "Sala",
+        pointScale: "fibonacci",
+        moderatorId: "p1",
+        participants: [
+          { id: "p1", name: "Ana", isModerator: true, joinedAt: 1 },
+          { id: "p2", name: "Bia", isModerator: false, joinedAt: 1 },
         ],
-        criadaEm: 1,
-        ultimaAtividadeEm: 1,
-        rodada: { estado: "revelada", votantes: ["p1", "p2"], votos: { p1: "5", p2: "8" } },
+        createdAt: 1,
+        lastActivityAt: 1,
+        round: { state: "revealed", voters: ["p1", "p2"], votes: { p1: "5", p2: "8" } },
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const sala = await httpRoomClient.obterSala("abc1234");
+    const room = await httpRoomClient.getRoom("abc1234");
 
-    expect(sala?.rodada.votos).toEqual({ p1: "5", p2: "8" });
+    expect(room?.round.votes).toEqual({ p1: "5", p2: "8" });
   });
 });
 
 describe("httpRoomClient — notificação local imediata (sem esperar o polling)", () => {
-  it("votar notifica um assinante de assinarSala na hora, sem esperar o próximo tick", async () => {
-    salvarIdentidade("abc1234", { participanteId: "p1", ehModerador: true, token: "token-secreto" });
+  it("vote notifica um assinante de subscribeToRoom na hora, sem esperar o próximo tick", async () => {
+    saveIdentity("abc1234", { participantId: "p1", isModerator: true, token: "token-secreto" });
 
-    const respostaInicial = respostaJson(200, {
-      codigo: "abc1234",
-      nome: "Sala",
-      escalaPontos: "fibonacci",
-      moderadorId: "p1",
-      participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
-      criadaEm: 1,
-      ultimaAtividadeEm: 1,
-      rodada: { estado: "votando", votantes: [] },
+    const initialResponse = jsonResponse(200, {
+      code: "abc1234",
+      name: "Sala",
+      pointScale: "fibonacci",
+      moderatorId: "p1",
+      participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+      createdAt: 1,
+      lastActivityAt: 1,
+      round: { state: "voting", voters: [] },
     });
-    const respostaAposVotar = respostaJson(200, {
-      codigo: "abc1234",
-      nome: "Sala",
-      escalaPontos: "fibonacci",
-      moderadorId: "p1",
-      participantes: [{ id: "p1", nome: "Ana", ehModerador: true, entrouEm: 1 }],
-      criadaEm: 1,
-      ultimaAtividadeEm: 2,
-      rodada: { estado: "votando", votantes: ["p1"], meuVoto: "5" },
+    const afterVoteResponse = jsonResponse(200, {
+      code: "abc1234",
+      name: "Sala",
+      pointScale: "fibonacci",
+      moderatorId: "p1",
+      participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+      createdAt: 1,
+      lastActivityAt: 2,
+      round: { state: "voting", voters: ["p1"], myVote: "5" },
     });
-    const fetchMock = vi.fn().mockResolvedValueOnce(respostaInicial).mockResolvedValueOnce(respostaAposVotar);
+    const fetchMock = vi.fn().mockResolvedValueOnce(initialResponse).mockResolvedValueOnce(afterVoteResponse);
     vi.stubGlobal("fetch", fetchMock);
 
     const callback = vi.fn();
-    const cancelar = httpRoomClient.assinarSala("abc1234", callback);
+    const unsubscribe = httpRoomClient.subscribeToRoom("abc1234", callback);
     await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
 
-    await httpRoomClient.votar("abc1234", "p1", "5");
+    await httpRoomClient.vote("abc1234", "p1", "5");
 
     // Nenhum novo fetch de polling rodou ainda (setInterval não disparou) —
-    // a notificação veio direto da resposta de `votar`, não de um novo GET.
+    // a notificação veio direto da resposta de `vote`, não de um novo GET.
     expect(callback).toHaveBeenCalledTimes(2);
-    expect(callback.mock.calls[1][0]?.rodada.votos["p1"]).toBe("5");
+    expect(callback.mock.calls[1][0]?.round.votes["p1"]).toBe("5");
 
-    cancelar();
+    unsubscribe();
   });
 });
 
 describe("httpRoomClient — tratamento de erro (achado E1)", () => {
-  it("converte corpo {codigo, mensagem} reconhecido em RoomClientError", async () => {
+  it("converte corpo {code, message} reconhecido em RoomClientError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(404, { codigo: "SALA_NAO_ENCONTRADA", mensagem: "Essa sala não existe ou expirou." }),
+      jsonResponse(404, { code: "ROOM_NOT_FOUND", message: "Essa sala não existe ou expirou." }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(httpRoomClient.votar("abc1234", "p1", "5")).rejects.toThrow(RoomClientError);
+    await expect(httpRoomClient.vote("abc1234", "p1", "5")).rejects.toThrow(RoomClientError);
   });
 
-  it("obterSala devolve null (não lança) quando a sala não é encontrada", async () => {
+  it("getRoom devolve null (não lança) quando a sala não é encontrada", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
-      respostaJson(404, { codigo: "SALA_NAO_ENCONTRADA", mensagem: "Essa sala não existe ou expirou." }),
+      jsonResponse(404, { code: "ROOM_NOT_FOUND", message: "Essa sala não existe ou expirou." }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(httpRoomClient.obterSala("inexistente")).resolves.toBeNull();
+    await expect(httpRoomClient.getRoom("inexistente")).resolves.toBeNull();
   });
 
   it("uma falha de fetch (rede indisponível) nunca vira RoomClientError", async () => {
     const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
     vi.stubGlobal("fetch", fetchMock);
 
-    let erroCapturado: unknown;
+    let caughtError: unknown;
     try {
-      await httpRoomClient.votar("abc1234", "p1", "5");
+      await httpRoomClient.vote("abc1234", "p1", "5");
     } catch (e) {
-      erroCapturado = e;
+      caughtError = e;
     }
-    expect(erroCapturado).not.toBeInstanceOf(RoomClientError);
-    expect(erroCapturado).toBeInstanceOf(TypeError);
+    expect(caughtError).not.toBeInstanceOf(RoomClientError);
+    expect(caughtError).toBeInstanceOf(TypeError);
   });
 
   it("uma resposta 5xx sem corpo JSON reconhecido nunca vira RoomClientError", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("Internal Server Error", { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    let erroCapturado: unknown;
+    let caughtError: unknown;
     try {
-      await httpRoomClient.votar("abc1234", "p1", "5");
+      await httpRoomClient.vote("abc1234", "p1", "5");
     } catch (e) {
-      erroCapturado = e;
+      caughtError = e;
     }
-    expect(erroCapturado).not.toBeInstanceOf(RoomClientError);
+    expect(caughtError).not.toBeInstanceOf(RoomClientError);
   });
 });

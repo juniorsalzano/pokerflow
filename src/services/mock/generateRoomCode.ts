@@ -1,17 +1,17 @@
-const ALFABETO = "abcdefghijkmnpqrstuvwxyz23456789"; // sem 0/o/1/l/i, evita ambiguidade visual
-const TAMANHO = 7;
+const ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789"; // no 0/o/1/l/i, avoids visual ambiguity
+const LENGTH = 7;
 
 /**
- * Gera um código curto e legível para a sala usando a Web Crypto API nativa
- * (sem dependência externa — ver research.md §3). Quando a API real existir,
- * a geração migra para o servidor, mas esta função pode ser reaproveitada.
+ * Generates a short, readable room code using the native Web Crypto API
+ * (no external dependency — see research.md §3). When the real API exists,
+ * generation moves to the server, but this function can be reused.
  */
 export function generateRoomCode(): string {
-  const valores = new Uint32Array(TAMANHO);
-  crypto.getRandomValues(valores);
-  let codigo = "";
-  for (let i = 0; i < TAMANHO; i++) {
-    codigo += ALFABETO[valores[i] % ALFABETO.length];
+  const values = new Uint32Array(LENGTH);
+  crypto.getRandomValues(values);
+  let code = "";
+  for (let i = 0; i < LENGTH; i++) {
+    code += ALPHABET[values[i] % ALPHABET.length];
   }
-  return codigo;
+  return code;
 }

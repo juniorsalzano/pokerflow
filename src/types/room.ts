@@ -1,79 +1,95 @@
-export type EscalaPontos = "fibonacci" | "sequencial" | "camisetas";
+export type PointScale = "fibonacci" | "sequential" | "tshirts";
 
-export const ESCALAS_PONTOS: Record<EscalaPontos, string[]> = {
+export const POINT_SCALES: Record<PointScale, string[]> = {
   fibonacci: ["0", "1", "2", "3", "5", "8", "13", "21", "?", "☕"],
-  sequencial: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
-  camisetas: ["PP", "P", "M", "G", "GG"],
+  sequential: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"],
+  tshirts: ["PP", "P", "M", "G", "GG"],
 };
 
-export const ESCALAS_PONTOS_LABEL: Record<EscalaPontos, string> = {
+export const POINT_SCALE_LABELS: Record<PointScale, string> = {
   fibonacci: "Fibonacci modificado",
-  sequencial: "Sequencial (1–10)",
-  camisetas: "Camisetas (PP–GG)",
+  sequential: "Sequencial (1–10)",
+  tshirts: "Camisetas (PP–GG)",
 };
 
-export interface Participante {
+export interface Participant {
   id: string;
-  nome: string;
-  ehModerador: boolean;
-  entrouEm: number;
+  name: string;
+  isModerator: boolean;
+  joinedAt: number;
 }
 
-export type EstadoRodada = "votando" | "revelada";
+export type RoundState = "voting" | "revealed";
 
 /**
- * Rodada de votação de uma sala (feature 002). `votos` é um único objeto
- * acessível a todo o código do app — o sigilo do voto (Princípio II) é
- * responsabilidade da camada de apresentação, que nunca deve renderizar
- * `votos[outroParticipanteId]` antes de `estado === 'revelada'` (ver
- * data-model.md §Sigilo e research.md §5).
+ * Voting round of a room (feature 002). `votes` is a single object
+ * accessible to all app code — vote secrecy (Principle II) is the
+ * presentation layer's responsibility, which must never render
+ * `votes[otherParticipantId]` before `state === 'revealed'` (see
+ * data-model.md §Secrecy and research.md §5).
  */
-export interface Rodada {
-  estado: EstadoRodada;
-  votos: Record<string, string>;
+export interface Round {
+  state: RoundState;
+  votes: Record<string, string>;
 }
 
-export interface Sala {
-  codigo: string;
-  nome: string;
-  escalaPontos: EscalaPontos;
-  moderadorId: string;
-  participantes: Participante[];
-  criadaEm: number;
-  ultimaAtividadeEm: number;
-  rodada: Rodada;
+export interface Room {
+  code: string;
+  name: string;
+  pointScale: PointScale;
+  moderatorId: string;
+  participants: Participant[];
+  createdAt: number;
+  lastActivityAt: number;
+  round: Round;
 }
 
-export interface CriarSalaInput {
-  nomeSala: string;
-  nomeCriador: string;
-  escalaPontos: EscalaPontos;
+export interface CreateRoomInput {
+  roomName: string;
+  creatorName: string;
+  pointScale: PointScale;
 }
 
-/** Resumo derivado da rodada revelada (data-model.md §Resumo pós-revelação). Não é persistido. */
-export type ResumoResultado =
-  | { tipo: "consenso"; valor: string }
-  | { tipo: "dispersao"; min: string; max: string }
-  | { tipo: "sem-consenso" };
+/** Summary derived from the revealed round (data-model.md §Post-reveal summary). Not persisted. */
+export type ResultSummary =
+  | { type: "consensus"; value: string }
+  | { type: "spread"; min: string; max: string }
+  | { type: "no-consensus" };
 
-export interface ResumoRodada {
-  votaram: number;
-  naoVotaram: Participante[];
-  resultado: ResumoResultado;
+export interface RoundSummary {
+  votedCount: number;
+  notVoted: Participant[];
+  result: ResultSummary;
 }
 
-export type ErroRoomClient =
-  | "SALA_NAO_ENCONTRADA"
-  | "NOME_DUPLICADO"
-  | "ENTRADA_INVALIDA"
-  | "RODADA_JA_REVELADA"
-  | "VALOR_INVALIDO"
-  | "APENAS_MODERADOR"
-  | "NAO_AUTORIZADO";
+/** A group of participants who voted the same value (spec 004, data-model.md §ResultDistribution). */
+export interface ValueGroup {
+  value: string;
+  participants: Participant[];
+}
+
+/**
+ * Grouping of a revealed round's votes by distinct value — input for the
+ * grouped result panel (spec 004, FR-007). Derived, not persisted — see
+ * `groupByValue` in `roomStore.ts`.
+ */
+export interface ResultDistribution {
+  groups: ValueGroup[];
+  notVoted: Participant[];
+}
+
+export type RoomClientErrorCode =
+  | "ROOM_NOT_FOUND"
+  | "DUPLICATE_NAME"
+  | "INVALID_INPUT"
+  | "ROUND_ALREADY_REVEALED"
+  | "INVALID_VALUE"
+  | "MODERATOR_ONLY"
+  | "NOT_AUTHORIZED";
 
 export class RoomClientError extends Error {
   constructor(
-    public readonly codigo: ErroRoomClient,
+    public readonly code: RoomClientErrorCode,
     message: string,
   ) {
     super(message);

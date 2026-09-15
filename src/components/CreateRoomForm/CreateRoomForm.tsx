@@ -1,31 +1,31 @@
 import { FormEvent, useState } from "react";
-import { CriarSalaInput, EscalaPontos, ESCALAS_PONTOS_LABEL } from "../../types/room";
+import { CreateRoomInput, PointScale, POINT_SCALE_LABELS } from "../../types/room";
 import styles from "./CreateRoomForm.module.css";
 
-const ESCALAS: EscalaPontos[] = ["fibonacci", "sequencial", "camisetas"];
+const SCALES: PointScale[] = ["fibonacci", "sequential", "tshirts"];
 
 interface CreateRoomFormProps {
-  onSubmit: (input: CriarSalaInput) => void;
-  carregando?: boolean;
-  erro?: string | null;
+  onSubmit: (input: CreateRoomInput) => void;
+  loading?: boolean;
+  error?: string | null;
 }
 
-export default function CreateRoomForm({ onSubmit, carregando, erro }: CreateRoomFormProps) {
-  const [nomeSala, setNomeSala] = useState("");
-  const [nomeCriador, setNomeCriador] = useState("");
-  const [escalaPontos, setEscalaPontos] = useState<EscalaPontos | null>(null);
-  const [tentouEnviar, setTentouEnviar] = useState(false);
+export default function CreateRoomForm({ onSubmit, loading, error }: CreateRoomFormProps) {
+  const [roomName, setRoomName] = useState("");
+  const [creatorName, setCreatorName] = useState("");
+  const [pointScale, setPointScale] = useState<PointScale | null>(null);
+  const [triedSubmit, setTriedSubmit] = useState(false);
 
-  const nomeSalaValido = nomeSala.trim().length > 0;
-  const nomeCriadorValido = nomeCriador.trim().length > 0;
-  const escalaValida = escalaPontos !== null;
-  const formularioValido = nomeSalaValido && nomeCriadorValido && escalaValida;
+  const isRoomNameValid = roomName.trim().length > 0;
+  const isCreatorNameValid = creatorName.trim().length > 0;
+  const isScaleValid = pointScale !== null;
+  const isFormValid = isRoomNameValid && isCreatorNameValid && isScaleValid;
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setTentouEnviar(true);
-    if (!formularioValido || !escalaPontos) return;
-    onSubmit({ nomeSala, nomeCriador, escalaPontos });
+    setTriedSubmit(true);
+    if (!isFormValid || !pointScale) return;
+    onSubmit({ roomName, creatorName, pointScale });
   }
 
   return (
@@ -37,59 +37,59 @@ export default function CreateRoomForm({ onSubmit, carregando, erro }: CreateRoo
       </p>
 
       <div className={styles.field}>
-        <label htmlFor="nomeSala">Nome da sala</label>
+        <label htmlFor="roomName">Nome da sala</label>
         <input
-          id="nomeSala"
+          id="roomName"
           type="text"
           placeholder="Ex: Refinamento Sprint 42"
-          value={nomeSala}
-          onChange={(e) => setNomeSala(e.target.value)}
+          value={roomName}
+          onChange={(e) => setRoomName(e.target.value)}
           maxLength={60}
         />
-        {tentouEnviar && !nomeSalaValido && (
-          <span className={styles.erroCampo}>Informe um nome para a sala.</span>
+        {triedSubmit && !isRoomNameValid && (
+          <span className={styles.fieldError}>Informe um nome para a sala.</span>
         )}
       </div>
 
       <div className={styles.field}>
-        <label htmlFor="nomeCriador">Seu nome</label>
+        <label htmlFor="creatorName">Seu nome</label>
         <input
-          id="nomeCriador"
+          id="creatorName"
           type="text"
           placeholder="Como o time vai te ver"
-          value={nomeCriador}
-          onChange={(e) => setNomeCriador(e.target.value)}
+          value={creatorName}
+          onChange={(e) => setCreatorName(e.target.value)}
           maxLength={30}
         />
-        {tentouEnviar && !nomeCriadorValido && (
-          <span className={styles.erroCampo}>Informe seu nome.</span>
+        {triedSubmit && !isCreatorNameValid && (
+          <span className={styles.fieldError}>Informe seu nome.</span>
         )}
       </div>
 
       <div className={styles.field}>
-        <span className={styles.labelEscala}>Escala de pontos</span>
-        <div className={styles.escalas} role="radiogroup" aria-label="Escala de pontos">
-          {ESCALAS.map((escala) => (
+        <span className={styles.scaleLabel}>Escala de pontos</span>
+        <div className={styles.scales} role="radiogroup" aria-label="Escala de pontos">
+          {SCALES.map((scale) => (
             <button
               type="button"
-              key={escala}
-              className={`${styles.pill} ${escalaPontos === escala ? styles.pillActive : ""}`}
-              aria-pressed={escalaPontos === escala}
-              onClick={() => setEscalaPontos(escala)}
+              key={scale}
+              className={`${styles.pill} ${pointScale === scale ? styles.pillActive : ""}`}
+              aria-pressed={pointScale === scale}
+              onClick={() => setPointScale(scale)}
             >
-              {ESCALAS_PONTOS_LABEL[escala]}
+              {POINT_SCALE_LABELS[scale]}
             </button>
           ))}
         </div>
-        {tentouEnviar && !escalaValida && (
-          <span className={styles.erroCampo}>Escolha uma escala de pontos.</span>
+        {triedSubmit && !isScaleValid && (
+          <span className={styles.fieldError}>Escolha uma escala de pontos.</span>
         )}
       </div>
 
-      {erro && <p className={styles.erroGeral}>{erro}</p>}
+      {error && <p className={styles.generalError}>{error}</p>}
 
-      <button type="submit" className={styles.cta} disabled={carregando}>
-        {carregando ? "Criando..." : "Criar sala →"}
+      <button type="submit" className={styles.cta} disabled={loading}>
+        {loading ? "Criando..." : "Criar sala →"}
       </button>
       <p className={styles.helper}>
         Você recebe um link para convidar o time na próxima tela.

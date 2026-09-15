@@ -1,36 +1,36 @@
-import { Participante } from "../../types/room";
+import { Participant } from "../../types/room";
 import styles from "./ParticipantList.module.css";
 
 interface ParticipantListProps {
-  participantes: Participante[];
-  vocesId?: string;
+  participants: Participant[];
+  yourId?: string;
 }
 
-function iniciais(nome: string): string {
-  return nome.trim().slice(0, 2).toUpperCase();
+function initials(name: string): string {
+  return name.trim().slice(0, 2).toUpperCase();
 }
 
-const CORES = ["#8B5CF6", "#38BDF8", "#FB7185", "#2DD4BF", "#F472B6", "#FBBF24"];
+const COLORS = ["#8B5CF6", "#38BDF8", "#FB7185", "#2DD4BF", "#F472B6", "#FBBF24"];
 
-function corPara(participanteId: string): string {
-  let soma = 0;
-  for (let i = 0; i < participanteId.length; i++) soma += participanteId.charCodeAt(i);
-  return CORES[soma % CORES.length];
+function colorFor(participantId: string): string {
+  let sum = 0;
+  for (let i = 0; i < participantId.length; i++) sum += participantId.charCodeAt(i);
+  return COLORS[sum % COLORS.length];
 }
 
-export default function ParticipantList({ participantes, vocesId }: ParticipantListProps) {
+export default function ParticipantList({ participants, yourId }: ParticipantListProps) {
   return (
-    <ul className={styles.lista} aria-label="Participantes da sala">
-      {participantes.map((p) => (
+    <ul className={styles.list} aria-label="Participantes da sala">
+      {participants.map((p) => (
         <li key={p.id} className={styles.item}>
-          <span className={styles.avatar} style={{ background: corPara(p.id) }}>
-            {iniciais(p.nome)}
+          <span className={styles.avatar} style={{ background: colorFor(p.id) }}>
+            {initials(p.name)}
           </span>
-          <span className={styles.nome}>
-            {p.nome}
-            {p.id === vocesId && " (você)"}
+          <span className={styles.name}>
+            {p.name}
+            {p.id === yourId && " (você)"}
           </span>
-          {p.ehModerador && <span className={styles.badgeModerador}>Moderador(a)</span>}
+          {p.isModerator && <span className={styles.moderatorBadge}>Moderador(a)</span>}
         </li>
       ))}
     </ul>

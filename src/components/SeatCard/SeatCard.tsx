@@ -1,66 +1,78 @@
-import { Participante } from "../../types/room";
-import ValorCarta from "../ValorCarta/ValorCarta";
+import { Participant } from "../../types/room";
+import CardValue from "../CardValue/CardValue";
 import styles from "./SeatCard.module.css";
 
+/**
+ * Delay between one seat card's flip and the next, in ms (staggers the
+ * reveal animation by index). Exported so `useRevealTransition` can compute
+ * how long to wait before considering the individual flip finished
+ * (data-model.md §RevealPhase) without duplicating the magic number.
+ */
+export const CARD_STAGGER_MS = 60;
+
 interface SeatCardProps {
-  participante: Participante;
-  /** Valor votado por este participante, se houver — undefined = ainda não votou. */
-  voto?: string;
-  /** true quando o moderador já revelou a rodada atual. */
-  revelado: boolean;
-  /** true quando este assento representa o próprio usuário desta aba (FR-004a). */
-  souEu: boolean;
-  /** índice na lista, usado para escalonar a animação de virar no reveal (research.md §1). */
-  indice?: number;
+  participant: Participant;
+  /** Value voted by this participant, if any — undefined = hasn't voted yet. */
+  vote?: string;
+  /** true once the moderator has revealed the current round. */
+  revealed: boolean;
+  /** true when this seat represents this tab's own user (FR-004a). */
+  isMe: boolean;
+  /** index in the list, used to stagger the flip animation on reveal (research.md §1). */
+  index?: number;
 }
 
 /**
- * Cartinha de status por participante. Estados possíveis:
- * - vazio: participante ainda não votou.
- * - oculto (verso): participante já votou, mas o valor NÃO é exibido — nem
- *   no DOM — para quem não é o dono do voto e a rodada não foi revelada
- *   ainda (FR-003/FR-004/SC-002, o requisito mais crítico da feature).
- * - revelado: o valor fica visível, seja porque a rodada foi revelada
- *   (`revelado`) ou porque este é o próprio assento do usuário (`souEu`,
- *   FR-004a — o sigilo só vale em relação aos OUTROS participantes).
+ * Per-participant status card, always visible around the table (spec 004) —
+ * doesn't leave the screen on reveal; only flips in place. Possible states:
+ * - empty: participant hasn't voted yet.
+ * - hidden (back): participant has voted, but the value is NOT shown — not
+ *   even in the DOM — to anyone other than the vote's owner while the round
+ *   hasn't been revealed yet (FR-003/FR-004/SC-002, the feature's most
+ *   critical requirement).
+ * - revealed: the value becomes visible, either because the round was
+ *   revealed (`revealed`) or because this is the user's own seat (`isMe`,
+ *   FR-004a — secrecy only applies to OTHER participants).
  */
-export default function SeatCard({ participante, voto, revelado, souEu, indice = 0 }: SeatCardProps) {
-  const jaVotou = voto !== undefined;
-  const mostrarValor = jaVotou && (revelado || souEu);
+export default function SeatCard({ participant, vote, revealed, isMe, index = 0 }: SeatCardProps) {
+  const hasVoted = vote !== undefined;
+  const showValue = hasVoted && (revealed || isMe);
 
-  const estadoVisual = !jaVotou ? "vazio" : mostrarValor ? "revelado" : "oculto";
+  const visualState = !hasVoted ? "empty" : showValue ? "revealed" : "hidden";
 
-  const classeCarta = [styles.carta, styles[estadoVisual], souEu && styles.souEu]
+  const cardClass = [styles.card, styles[visualState], isMe && styles.isMe]
     .filter(Boolean)
     .join(" ");
 
   return (
     <li className={styles.item}>
       <div
-        className={classeCarta}
-        style={{ transitionDelay: estadoVisual === "revelado" ? `${indice * 60}ms` : "0ms" }}
+        className={cardClass}
+        style={{
+          transitionDelay: visualState === "revealed" ? `${index * CARD_STAGGER_MS}ms` : "0ms",
+        }}
         aria-label={
-          !jaVotou
-            ? `${participante.nome}: ainda não votou`
-            : mostrarValor
-              ? `${participante.nome}: votou ${voto}`
-              : `${participante.nome}: já votou`
+          !hasVoted
+            ? `${participant.name}: ainda não votou`
+            : showValue
+              ? `${participant.name}: votou ${vote}`
+              : `${participant.name}: já votou`
         }
       >
         <div className={styles.flipper}>
-          <div className={styles.faceVerso} aria-hidden={mostrarValor}>
-            <span className={styles.versoMarca} />
+          <div className={styles.cardBack} aria-hidden={showValue}>
+            <span className={styles.backMark} />
           </div>
-          <div className={styles.faceFrente} aria-hidden={!mostrarValor}>
-            {mostrarValor && voto !== undefined && <ValorCarta valor={voto} />}
+          <div className={styles.cardFront} aria-hidden={!showValue}>
+            {showValue && vote !== undefined && <CardValue value={vote} />}
           </div>
         </div>
       </div>
-      <span className={[styles.nome, souEu && styles.souEu].filter(Boolean).join(" ")}>
-        {participante.nome}
-        {souEu && " (você)"}
+      <span className={[styles.name, isMe && styles.isMe].filter(Boolean).join(" ")}>
+        {participant.name}
+        {isMe && " (você)"}
       </span>
-      {revelado && !jaVotou && <span className={styles.naoVotou}>Não votou</span>}
+      {revealed && !hasVoted && <span className={styles.notVoted}>Não votou</span>}
     </li>
   );
 }

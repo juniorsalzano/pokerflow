@@ -1,26 +1,26 @@
 import { useCallback, useEffect, useState } from "react";
 
-type Tema = "dark" | "light";
+type Theme = "dark" | "light";
 
-const CHAVE = "pokerflow:tema";
+const STORAGE_KEY = "pokerflow:theme";
 
-function lerTemaSalvo(): Tema {
-  const salvo = localStorage.getItem(CHAVE);
-  return salvo === "light" ? "light" : "dark";
+function readSavedTheme(): Theme {
+  const saved = localStorage.getItem(STORAGE_KEY);
+  return saved === "light" ? "light" : "dark";
 }
 
-/** Tema escuro é o padrão do PokerFlow; o usuário pode alternar para o claro. */
+/** Dark theme is PokerFlow's default; the user can toggle to light. */
 export function useTheme() {
-  const [tema, setTema] = useState<Tema>(() => lerTemaSalvo());
+  const [theme, setTheme] = useState<Theme>(() => readSavedTheme());
 
   useEffect(() => {
-    document.documentElement.dataset.theme = tema;
-    localStorage.setItem(CHAVE, tema);
-  }, [tema]);
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem(STORAGE_KEY, theme);
+  }, [theme]);
 
-  const alternar = useCallback(() => {
-    setTema((atual) => (atual === "dark" ? "light" : "dark"));
+  const toggle = useCallback(() => {
+    setTheme((current) => (current === "dark" ? "light" : "dark"));
   }, []);
 
-  return { tema, alternar };
+  return { theme, toggle };
 }
