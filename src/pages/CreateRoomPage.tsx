@@ -4,7 +4,7 @@ import { useCreateRoom } from "../hooks/useCreateRoom";
 import styles from "./CreateRoomPage.module.css";
 
 export default function CreateRoomPage() {
-  const { criarSala, erro, carregando } = useCreateRoom();
+  const { createRoom, error, loading } = useCreateRoom();
 
   return (
     <div className={styles.stage}>
@@ -27,7 +27,7 @@ export default function CreateRoomPage() {
       <div className={styles.toggleSlot}>
         <ThemeToggle />
       </div>
-      <CreateRoomForm onSubmit={criarSala} erro={erro} carregando={carregando} />
+      <CreateRoomForm onSubmit={createRoom} error={error} loading={loading} />
     </div>
   );
 }

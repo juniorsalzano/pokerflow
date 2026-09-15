@@ -6,7 +6,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<CreateRoomPage />} />
-      <Route path="/sala/:codigo" element={<RoomPage />} />
+      <Route path="/room/:code" element={<RoomPage />} />
     </Routes>
   );
 }

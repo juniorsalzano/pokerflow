@@ -1,34 +1,70 @@
-.mao {
+.hand {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
-  flex-wrap: wrap;
-  gap: 18px;
+  flex-wrap: nowrap;
+  gap: 8px;
   justify-content: center;
 }
 
-.carta {
-  width: 92px;
-  height: 130px;
+.hand li {
+  /* Shrinks to fit everything in a single line, no scrollbar — never wider
+     than 92px, never narrower than 40px (below that it becomes illegible). */
+  flex: 1 1 92px;
+  min-width: 40px;
+  max-width: 92px;
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* leaving: "leaving" phase — the card fades away downward in cascade,
+   making room for the grouped result panel that takes its place (spec 004,
+   FR-006). */
+.itemLeaving {
+  opacity: 0;
+  transform: scale(0.55) translateY(30px);
+  pointer-events: none;
+}
+
+/* entering: "returning" phase — the card comes back in cascade, "bottom
+   to top" (spec 004, História 4). */
+.itemEntering {
+  animation: itemEnter 0.4s ease both;
+}
+
+@keyframes itemEnter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.card {
+  width: 100%;
+  aspect-ratio: 92 / 130;
   padding: 0;
   border: none;
   background: transparent;
   cursor: pointer;
   perspective: 600px;
+  container-type: inline-size;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.18s ease;
 }
 
-.carta:not(:disabled):not(.selecionada):hover {
+.card:not(:disabled):not(.selected):hover {
   transform: translateY(-6px);
 }
 
-.carta.selecionada {
+.card.selected {
   transform: translateY(-10px);
 }
 
-.carta:disabled {
+.card:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -44,12 +80,12 @@
   border-radius: 12px;
 }
 
-.carta.selecionada .flipper {
+.card.selected .flipper {
   transform: rotateY(180deg);
 }
 
-.faceFrente,
-.faceVerso {
+.cardFront,
+.cardBack {
   position: absolute;
   inset: 0;
   display: flex;
@@ -59,10 +95,10 @@
   backface-visibility: hidden;
   font-family: var(--font-display);
   font-weight: 700;
-  font-size: 27px;
+  font-size: clamp(13px, 22cqw, 27px);
 }
 
-.faceFrente {
+.cardFront {
   background: var(--surface-elevated);
   border: 1.5px solid var(--border);
   color: var(--text);
@@ -70,12 +106,12 @@
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
-.carta:not(:disabled):not(.selecionada):hover .faceFrente {
+.card:not(:disabled):not(.selected):hover .cardFront {
   border-color: var(--accent-a);
   box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35);
 }
 
-.faceVerso {
+.cardBack {
   background: linear-gradient(135deg, var(--accent-a), var(--accent-b));
   color: #ffffff;
   border: 1.5px solid transparent;
@@ -84,21 +120,22 @@
 }
 
 @media (max-width: 640px) {
-  .mao {
-    gap: 12px;
+  .hand {
+    flex-wrap: wrap;
+    gap: 8px;
   }
-  .carta {
+  .hand li {
+    flex: 0 0 auto;
     width: 66px;
-    height: 94px;
+    max-width: none;
   }
-  .carta:not(:disabled):not(.selecionada):hover {
+  .card {
+    aspect-ratio: 66 / 94;
+  }
+  .card:not(:disabled):not(.selected):hover {
     transform: none;
   }
-  .carta.selecionada {
+  .card.selected {
     transform: translateY(-6px);
-  }
-  .faceFrente,
-  .faceVerso {
-    font-size: 19px;
   }
 }

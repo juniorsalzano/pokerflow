@@ -1,208 +1,243 @@
 import { generateRoomCode } from "./generateRoomCode";
-import { nomesIguaisCaseInsensitive, validarNomeParticipante, validarNomeSala } from "./validation";
+import { namesEqualCaseInsensitive, validateParticipantName, validateRoomName } from "./validation";
 import {
-  CriarSalaInput,
-  ESCALAS_PONTOS,
-  Participante,
-  ResumoRodada,
+  CreateRoomInput,
+  POINT_SCALES,
+  Participant,
+  ResultDistribution,
   RoomClientError,
-  Sala,
+  Room,
+  RoundSummary,
 } from "../../types/room";
 
-/** Limite de inatividade após o qual uma sala é tratada como expirada (FR-008, research.md §5). */
-export const LIMITE_INATIVIDADE_MS = 4 * 60 * 60 * 1000;
+/** Inactivity limit after which a room is treated as expired (FR-008, research.md §5). */
+export const INACTIVITY_LIMIT_MS = 4 * 60 * 60 * 1000;
 
-function novoId(): string {
+function newId(): string {
   return crypto.randomUUID();
 }
 
 /**
- * Lógica pura de criação de sala (FR-001/FR-002/FR-002a/FR-002b/FR-005).
- * Sem I/O — quem chama decide onde persistir o resultado.
+ * Pure room-creation logic (FR-001/FR-002/FR-002a/FR-002b/FR-005).
+ * No I/O — the caller decides where to persist the result.
  */
-export function criarSala(input: CriarSalaInput, agora: number = Date.now()): Sala {
-  const nomeSala = validarNomeSala(input.nomeSala);
-  const nomeCriador = validarNomeParticipante(input.nomeCriador);
+export function createRoom(input: CreateRoomInput, now: number = Date.now()): Room {
+  const roomName = validateRoomName(input.roomName);
+  const creatorName = validateParticipantName(input.creatorName);
 
-  const moderador: Participante = {
-    id: novoId(),
-    nome: nomeCriador,
-    ehModerador: true,
-    entrouEm: agora,
+  const moderator: Participant = {
+    id: newId(),
+    name: creatorName,
+    isModerator: true,
+    joinedAt: now,
   };
 
   return {
-    codigo: generateRoomCode(),
-    nome: nomeSala,
-    escalaPontos: input.escalaPontos,
-    moderadorId: moderador.id,
-    participantes: [moderador],
-    criadaEm: agora,
-    ultimaAtividadeEm: agora,
-    rodada: { estado: "votando", votos: {} },
+    code: generateRoomCode(),
+    name: roomName,
+    pointScale: input.pointScale,
+    moderatorId: moderator.id,
+    participants: [moderator],
+    createdAt: now,
+    lastActivityAt: now,
+    round: { state: "voting", votes: {} },
   };
 }
 
 /**
- * Verifica se uma sala deve ser tratada como expirada por inatividade
- * (FR-008). Necessário porque o mock persiste em localStorage, que não
- * expira sozinho (ver research.md §5).
+ * Checks whether a room should be treated as expired due to inactivity
+ * (FR-008). Needed because the mock persists to localStorage, which doesn't
+ * expire on its own (see research.md §5).
  */
-export function estaExpirada(sala: Sala, agora: number = Date.now()): boolean {
-  return agora - sala.ultimaAtividadeEm > LIMITE_INATIVIDADE_MS;
+export function isExpired(room: Room, now: number = Date.now()): boolean {
+  return now - room.lastActivityAt > INACTIVITY_LIMIT_MS;
 }
 
 /**
- * Adiciona um participante à sala (FR-003/FR-006). Lança RoomClientError
- * "NOME_DUPLICADO" se já existir alguém ativo com o mesmo nome
- * (case-insensitive) na sala.
+ * Adds a participant to the room (FR-003/FR-006). Throws RoomClientError
+ * "DUPLICATE_NAME" if someone active with the same name (case-insensitive)
+ * already exists in the room.
  */
-export function adicionarParticipante(
-  sala: Sala,
-  nomeBruto: string,
-  agora: number = Date.now(),
-): { sala: Sala; participante: Participante } {
-  const nome = validarNomeParticipante(nomeBruto);
+export function addParticipant(
+  room: Room,
+  rawName: string,
+  now: number = Date.now(),
+): { room: Room; participant: Participant } {
+  const name = validateParticipantName(rawName);
 
-  const jaExiste = sala.participantes.some((p) => nomesIguaisCaseInsensitive(p.nome, nome));
-  if (jaExiste) {
+  const alreadyExists = room.participants.some((p) => namesEqualCaseInsensitive(p.name, name));
+  if (alreadyExists) {
     throw new RoomClientError(
-      "NOME_DUPLICADO",
+      "DUPLICATE_NAME",
       "Já existe alguém nessa sala com esse nome. Escolha outro.",
     );
   }
 
-  const participante: Participante = {
-    id: novoId(),
-    nome,
-    ehModerador: false,
-    entrouEm: agora,
+  const participant: Participant = {
+    id: newId(),
+    name,
+    isModerator: false,
+    joinedAt: now,
   };
 
-  const salaAtualizada: Sala = {
-    ...sala,
-    participantes: [...sala.participantes, participante],
-    ultimaAtividadeEm: agora,
+  const updatedRoom: Room = {
+    ...room,
+    participants: [...room.participants, participant],
+    lastActivityAt: now,
   };
 
-  return { sala: salaAtualizada, participante };
+  return { room: updatedRoom, participant };
 }
 
-/** Remove um participante da sala (US3 — sair/desconectar). */
-export function removerParticipante(
-  sala: Sala,
-  participanteId: string,
-  agora: number = Date.now(),
-): Sala {
+/** Removes a participant from the room (US3 — leave/disconnect). */
+export function removeParticipant(
+  room: Room,
+  participantId: string,
+  now: number = Date.now(),
+): Room {
   return {
-    ...sala,
-    participantes: sala.participantes.filter((p) => p.id !== participanteId),
-    ultimaAtividadeEm: agora,
+    ...room,
+    participants: room.participants.filter((p) => p.id !== participantId),
+    lastActivityAt: now,
   };
 }
 
 /**
- * Registra ou substitui o voto de um participante na rodada atual
- * (FR-002/FR-005). Lança `RODADA_JA_REVELADA` se a rodada já foi revelada
- * (FR-009 — votos travados após o reveal) e `VALOR_INVALIDO` se o valor não
- * pertencer à escala de pontos da sala.
+ * Registers or replaces a participant's vote in the current round
+ * (FR-002/FR-005). Throws `ROUND_ALREADY_REVEALED` if the round was already
+ * revealed (FR-009 — votes locked after the reveal) and `INVALID_VALUE` if
+ * the value doesn't belong to the room's point scale.
  */
-export function votar(
-  sala: Sala,
-  participanteId: string,
-  valor: string,
-  agora: number = Date.now(),
-): Sala {
-  if (sala.rodada.estado !== "votando") {
+export function vote(
+  room: Room,
+  participantId: string,
+  value: string,
+  now: number = Date.now(),
+): Room {
+  if (room.round.state !== "voting") {
     throw new RoomClientError(
-      "RODADA_JA_REVELADA",
+      "ROUND_ALREADY_REVEALED",
       "Os votos desta rodada já foram revelados. Aguarde o próximo reset para votar.",
     );
   }
-  if (!ESCALAS_PONTOS[sala.escalaPontos].includes(valor)) {
-    throw new RoomClientError("VALOR_INVALIDO", "Esse valor não faz parte da escala desta sala.");
+  if (!POINT_SCALES[room.pointScale].includes(value)) {
+    throw new RoomClientError("INVALID_VALUE", "Esse valor não faz parte da escala desta sala.");
   }
 
   return {
-    ...sala,
-    rodada: {
-      ...sala.rodada,
-      votos: { ...sala.rodada.votos, [participanteId]: valor },
+    ...room,
+    round: {
+      ...room.round,
+      votes: { ...room.round.votes, [participantId]: value },
     },
-    ultimaAtividadeEm: agora,
+    lastActivityAt: now,
   };
 }
 
 /**
- * Revela os votos da rodada atual (FR-006/FR-007), exclusivo ao moderador.
- * Lança `APENAS_MODERADOR` se quem chamou não for o dono da sala.
+ * Reveals the current round's votes (FR-006/FR-007), moderator-only.
+ * Throws `MODERATOR_ONLY` if the caller isn't the room owner.
  */
-export function revelar(sala: Sala, participanteId: string, agora: number = Date.now()): Sala {
-  if (participanteId !== sala.moderadorId) {
-    throw new RoomClientError("APENAS_MODERADOR", "Apenas o moderador da sala pode revelar os votos.");
+export function reveal(room: Room, participantId: string, now: number = Date.now()): Room {
+  if (participantId !== room.moderatorId) {
+    throw new RoomClientError("MODERATOR_ONLY", "Apenas o moderador da sala pode revelar os votos.");
   }
 
   return {
-    ...sala,
-    rodada: { ...sala.rodada, estado: "revelada" },
-    ultimaAtividadeEm: agora,
+    ...room,
+    round: { ...room.round, state: "revealed" },
+    lastActivityAt: now,
   };
 }
 
 /**
- * Limpa os votos da rodada atual e volta ao estado de votação oculta
- * (FR-010/FR-011/FR-012), exclusivo ao moderador. Aceito em qualquer estado
- * atual da rodada (idempotente em relação a `estado`).
+ * Clears the current round's votes and returns to hidden voting state
+ * (FR-010/FR-011/FR-012), moderator-only. Accepted regardless of the
+ * round's current state (idempotent with respect to `state`).
  */
-export function resetar(sala: Sala, participanteId: string, agora: number = Date.now()): Sala {
-  if (participanteId !== sala.moderadorId) {
-    throw new RoomClientError("APENAS_MODERADOR", "Apenas o moderador da sala pode resetar a rodada.");
+export function reset(room: Room, participantId: string, now: number = Date.now()): Room {
+  if (participantId !== room.moderatorId) {
+    throw new RoomClientError("MODERATOR_ONLY", "Apenas o moderador da sala pode resetar a rodada.");
   }
 
   return {
-    ...sala,
-    rodada: { estado: "votando", votos: {} },
-    ultimaAtividadeEm: agora,
+    ...room,
+    round: { state: "voting", votes: {} },
+    lastActivityAt: now,
   };
 }
 
-/** Verdadeiro se `valor` for um valor numérico da escala (exclui "?" e "☕"). */
-function ehValorNumerico(valor: string): boolean {
-  return valor.trim() !== "" && !Number.isNaN(Number(valor));
+/** True if `value` is a numeric scale value (excludes "?" and "☕"). */
+function isNumericValue(value: string): boolean {
+  return value.trim() !== "" && !Number.isNaN(Number(value));
 }
 
 /**
- * Resumo derivado da rodada atual (data-model.md §Resumo pós-revelação),
- * calculado sob demanda — nunca persistido. Itera sobre `sala.participantes`
- * (a lista atual), nunca sobre `Object.keys(rodada.votos)` diretamente: o
- * voto de alguém que já saiu da sala não deve mais contar em nenhum
- * resultado (Caso de Borda da spec).
+ * Summary derived from the current round (data-model.md §Post-reveal
+ * summary), computed on demand — never persisted. Iterates over
+ * `room.participants` (the current list), never over
+ * `Object.keys(round.votes)` directly: the vote of someone who already left
+ * the room must no longer count in any result (spec Edge Case).
  */
-export function resumoRodada(sala: Sala): ResumoRodada {
-  const { votos } = sala.rodada;
+export function getRoundSummary(room: Room): RoundSummary {
+  const { votes } = room.round;
 
-  const naoVotaram = sala.participantes.filter((p) => !(p.id in votos));
-  const votosAtuais = sala.participantes.filter((p) => p.id in votos).map((p) => votos[p.id]);
-  const votaram = votosAtuais.length;
+  const notVoted = room.participants.filter((p) => !(p.id in votes));
+  const currentVotes = room.participants.filter((p) => p.id in votes).map((p) => votes[p.id]);
+  const votedCount = currentVotes.length;
 
-  if (votaram === 0) {
-    return { votaram, naoVotaram, resultado: { tipo: "sem-consenso" } };
+  if (votedCount === 0) {
+    return { votedCount, notVoted, result: { type: "no-consensus" } };
   }
 
-  const todosIdenticos = votosAtuais.every((v) => v === votosAtuais[0]);
-  if (todosIdenticos) {
-    return { votaram, naoVotaram, resultado: { tipo: "consenso", valor: votosAtuais[0] } };
+  const allIdentical = currentVotes.every((v) => v === currentVotes[0]);
+  if (allIdentical) {
+    return { votedCount, notVoted, result: { type: "consensus", value: currentVotes[0] } };
   }
 
-  const escalaNumerica = sala.escalaPontos === "fibonacci" || sala.escalaPontos === "sequencial";
-  if (escalaNumerica && votosAtuais.every(ehValorNumerico)) {
-    const ordenados = [...votosAtuais].sort((a, b) => Number(a) - Number(b));
+  const numericScale = room.pointScale === "fibonacci" || room.pointScale === "sequential";
+  if (numericScale && currentVotes.every(isNumericValue)) {
+    const sorted = [...currentVotes].sort((a, b) => Number(a) - Number(b));
     return {
-      votaram,
-      naoVotaram,
-      resultado: { tipo: "dispersao", min: ordenados[0], max: ordenados[ordenados.length - 1] },
+      votedCount,
+      notVoted,
+      result: { type: "spread", min: sorted[0], max: sorted[sorted.length - 1] },
     };
   }
 
-  return { votaram, naoVotaram, resultado: { tipo: "sem-consenso" } };
+  return { votedCount, notVoted, result: { type: "no-consensus" } };
+}
+
+/**
+ * Groups the participants of a revealed round by voted value (spec 004,
+ * FR-007/FR-011/FR-012) — input for the grouped result panel. Same data
+ * source as `getRoundSummary` (iterates `room.participants`, never
+ * `Object.keys(round.votes)` directly, for the same reason: the vote of
+ * someone who already left the room must not count). Doesn't create empty
+ * groups — if nobody voted, `groups` is `[]` (FR-011, empty state handled
+ * by the UI).
+ */
+export function groupByValue(room: Room): ResultDistribution {
+  const { votes } = room.round;
+
+  const notVoted = room.participants.filter((p) => !(p.id in votes));
+  const voted = room.participants.filter((p) => p.id in votes);
+
+  const participantsByValue = new Map<string, Participant[]>();
+  for (const participant of voted) {
+    const value = votes[participant.id];
+    const group = participantsByValue.get(value);
+    if (group) {
+      group.push(participant);
+    } else {
+      participantsByValue.set(value, [participant]);
+    }
+  }
+
+  const groups = Array.from(participantsByValue, ([value, participants]) => ({
+    value,
+    participants,
+  }));
+
+  return { groups, notVoted };
 }

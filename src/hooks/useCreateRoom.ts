@@ -2,40 +2,41 @@ import { useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { roomClient } from "../services/roomClient";
 import { ValidationError } from "../services/mock/validation";
-import { CriarSalaInput, RoomClientError } from "../types/room";
-import { salvarIdentidade } from "./useModerator";
+import { CreateRoomInput, RoomClientError } from "../types/room";
+import { saveIdentity } from "./useModerator";
 
 export function useCreateRoom() {
   const navigate = useNavigate();
-  const [erro, setErro] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const criarSala = useCallback(
-    async (input: CriarSalaInput) => {
-      setErro(null);
-      setCarregando(true);
+  const createRoom = useCallback(
+    async (input: CreateRoomInput) => {
+      setError(null);
+      setLoading(true);
       try {
-        const { codigo, sala, token } = await roomClient.criarSala(input);
-        salvarIdentidade(codigo, { participanteId: sala.moderadorId, ehModerador: true, token });
-        navigate(`/sala/${codigo}`);
+        const { code, room, token } = await roomClient.createRoom(input);
+        saveIdentity(code, { participantId: room.moderatorId, isModerator: true, token });
+        navigate(`/room/${code}`);
       } catch (e) {
-        // Só exibimos a mensagem de erros conhecidos e já pensados para o
-        // usuário; qualquer outro erro inesperado usa uma mensagem genérica,
-        // para nunca vazar detalhes técnicos (Princípio VI). ValidationError
-        // (mock) e RoomClientError "ENTRADA_INVALIDA" (backend real) são o
-        // mesmo caso de negócio pelos dois caminhos (achado ao implementar
-        // a feature 003 — preserva SC-003, paridade de comportamento).
-        setErro(
+        // Only show the message for known errors we've already thought
+        // through for the user; any other unexpected error uses a generic
+        // message, to never leak technical details (Principle VI).
+        // ValidationError (mock) and RoomClientError "INVALID_INPUT" (real
+        // backend) are the same business case through both paths (found
+        // while implementing feature 003 — preserves SC-003, behavior
+        // parity).
+        setError(
           e instanceof ValidationError || e instanceof RoomClientError
             ? e.message
             : "Não foi possível criar a sala. Tente novamente.",
         );
       } finally {
-        setCarregando(false);
+        setLoading(false);
       }
     },
     [navigate],
   );
 
-  return { criarSala, erro, carregando };
+  return { createRoom, error, loading };
 }

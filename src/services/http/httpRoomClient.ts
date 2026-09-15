@@ -1,233 +1,233 @@
 import { RoomClient } from "../roomClient";
-import { lerIdentidade } from "../../hooks/useModerator";
-import { CriarSalaInput, ErroRoomClient, RoomClientError, Sala } from "../../types/room";
+import { readIdentity } from "../../hooks/useModerator";
+import { CreateRoomInput, RoomClientErrorCode, RoomClientError, Room } from "../../types/room";
 
-const INTERVALO_POLLING_MS = 2000;
-/** Placeholder para o voto de outro participante ainda não revelado — nunca é o valor real (achado D1). */
-const VOTO_OCULTO_PLACEHOLDER = "•";
+const POLLING_INTERVAL_MS = 2000;
+/** Placeholder for another participant's vote not yet revealed — never the real value (finding D1). */
+const HIDDEN_VOTE_PLACEHOLDER = "•";
 
 function baseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL ?? "";
 }
 
-interface RodadaRedigida {
-  estado: "votando" | "revelada";
-  votantes: string[];
-  meuVoto?: string;
-  votos?: Record<string, string>;
+interface RedactedRound {
+  state: "voting" | "revealed";
+  voters: string[];
+  myVote?: string;
+  votes?: Record<string, string>;
 }
 
-interface SalaRedigida extends Omit<Sala, "rodada"> {
-  rodada: RodadaRedigida;
+interface RedactedRoom extends Omit<Room, "round"> {
+  round: RedactedRound;
 }
 
-interface CorpoErro {
-  codigo?: ErroRoomClient;
-  mensagem?: string;
+interface ErrorBody {
+  code?: RoomClientErrorCode;
+  message?: string;
 }
 
 /**
- * Chama a API real. Erros de negócio (corpo `{codigo, mensagem}` reconhecido)
- * viram `RoomClientError`. Qualquer outra falha (rede indisponível, timeout,
- * 5xx sem corpo JSON) propaga como erro comum — nunca vira `RoomClientError`
- * (achado E1, `research.md` §11): os hooks já existentes (`useRodada`,
- * `useJoinRoom`, `useCreateRoom`) já mostram uma mensagem genérica de "tente
- * novamente" para qualquer erro que não seja `RoomClientError`.
+ * Calls the real API. Business errors (recognized `{code, message}` body)
+ * become `RoomClientError`. Any other failure (network unavailable, timeout,
+ * 5xx without a JSON body) propagates as a plain error — never becomes a
+ * `RoomClientError` (finding E1, `research.md` §11): the existing hooks
+ * (`useRound`, `useJoinRoom`, `useCreateRoom`) already show a generic "try
+ * again" message for any error that isn't a `RoomClientError`.
  */
-async function chamarApi<T>(caminho: string, init?: RequestInit): Promise<T> {
-  const resposta = await fetch(`${baseUrl()}${caminho}`, {
+async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${baseUrl()}${path}`, {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
 
-  if (!resposta.ok) {
-    let corpo: CorpoErro | undefined;
+  if (!response.ok) {
+    let body: ErrorBody | undefined;
     try {
-      corpo = (await resposta.json()) as CorpoErro;
+      body = (await response.json()) as ErrorBody;
     } catch {
-      corpo = undefined;
+      body = undefined;
     }
-    if (corpo?.codigo && corpo?.mensagem) {
-      throw new RoomClientError(corpo.codigo, corpo.mensagem);
+    if (body?.code && body?.message) {
+      throw new RoomClientError(body.code, body.message);
     }
-    throw new Error(`Falha na requisição (${resposta.status})`);
+    throw new Error(`Falha na requisição (${response.status})`);
   }
 
-  if (resposta.status === 204) {
+  if (response.status === 204) {
     return undefined as T;
   }
-  return (await resposta.json()) as T;
+  return (await response.json()) as T;
 }
 
 /**
- * Reconstrói o `Rodada.votos` interno (formato que os componentes já
- * esperam) a partir do payload redigido do servidor (contracts/api-contract.md).
- * O valor real de outro participante nunca chega até aqui antes do reveal —
- * `VOTO_OCULTO_PLACEHOLDER` só serve para `voto !== undefined` continuar
- * disparando o estado "já votou" no `SeatCard`.
+ * Rebuilds the internal `Round.votes` (shape the components already
+ * expect) from the server's redacted payload (contracts/api-contract.md).
+ * Another participant's real value never reaches this point before the
+ * reveal — `HIDDEN_VOTE_PLACEHOLDER` only exists so `vote !== undefined`
+ * keeps triggering the "already voted" state in `SeatCard`.
  */
-function reconstruirSala(bruta: SalaRedigida, meuId: string | undefined): Sala {
-  const votos: Record<string, string> = {};
+function rebuildRoom(raw: RedactedRoom, myId: string | undefined): Room {
+  const votes: Record<string, string> = {};
 
-  if (bruta.rodada.estado === "revelada" && bruta.rodada.votos) {
-    Object.assign(votos, bruta.rodada.votos);
+  if (raw.round.state === "revealed" && raw.round.votes) {
+    Object.assign(votes, raw.round.votes);
   } else {
-    for (const id of bruta.rodada.votantes) {
-      votos[id] = id === meuId && bruta.rodada.meuVoto !== undefined ? bruta.rodada.meuVoto : VOTO_OCULTO_PLACEHOLDER;
+    for (const id of raw.round.voters) {
+      votes[id] = id === myId && raw.round.myVote !== undefined ? raw.round.myVote : HIDDEN_VOTE_PLACEHOLDER;
     }
   }
 
-  return { ...bruta, rodada: { estado: bruta.rodada.estado, votos } };
+  return { ...raw, round: { state: raw.round.state, votes } };
 }
 
-function identidadeAtual(codigo: string): { participanteId: string; token: string } | undefined {
-  const identidade = lerIdentidade(codigo);
-  if (!identidade?.token) return undefined;
-  return { participanteId: identidade.participanteId, token: identidade.token };
+function currentIdentity(code: string): { participantId: string; token: string } | undefined {
+  const identity = readIdentity(code);
+  if (!identity?.token) return undefined;
+  return { participantId: identity.participantId, token: identity.token };
 }
 
-async function buscarSala(codigo: string): Promise<Sala | null> {
-  const quemPergunta = identidadeAtual(codigo);
-  const query = quemPergunta
-    ? `?participanteId=${encodeURIComponent(quemPergunta.participanteId)}&token=${encodeURIComponent(quemPergunta.token)}`
+async function fetchRoom(code: string): Promise<Room | null> {
+  const requester = currentIdentity(code);
+  const query = requester
+    ? `?participantId=${encodeURIComponent(requester.participantId)}&token=${encodeURIComponent(requester.token)}`
     : "";
 
   try {
-    const bruta = await chamarApi<SalaRedigida>(`/rooms/${codigo}${query}`);
-    return reconstruirSala(bruta, quemPergunta?.participanteId);
+    const raw = await callApi<RedactedRoom>(`/rooms/${code}${query}`);
+    return rebuildRoom(raw, requester?.participantId);
   } catch (e) {
-    if (e instanceof RoomClientError && e.codigo === "SALA_NAO_ENCONTRADA") {
+    if (e instanceof RoomClientError && e.code === "ROOM_NOT_FOUND") {
       return null;
     }
     throw e;
   }
 }
 
-// Assinantes locais (dentro desta mesma aba) por código de sala — mesmo
-// padrão do mockRoomClient. Existe para que `votar`/`revelar`/`resetar`
-// consigam notificar a própria tela na hora (ver `notificarAssinantes`),
-// em vez de depender do próximo tick do polling (até INTERVALO_POLLING_MS
-// de atraso perceptível no "efeito" da própria ação).
-const assinantesPorCodigo = new Map<string, Set<(sala: Sala | null) => void>>();
-const ultimoPayloadPorCodigo = new Map<string, string | null>();
+// Local subscribers (within this same tab) by room code — same pattern as
+// mockRoomClient. Exists so `vote`/`reveal`/`reset` can notify the screen
+// itself right away (see `notifySubscribers`), instead of depending on the
+// next polling tick (up to POLLING_INTERVAL_MS of perceptible delay on the
+// "effect" of the action itself).
+const subscribersByCode = new Map<string, Set<(room: Room | null) => void>>();
+const lastPayloadByCode = new Map<string, string | null>();
 
-function notificarAssinantes(codigo: string, sala: Sala | null): void {
-  const payload = JSON.stringify(sala);
-  if (payload === ultimoPayloadPorCodigo.get(codigo)) return;
-  ultimoPayloadPorCodigo.set(codigo, payload);
-  assinantesPorCodigo.get(codigo)?.forEach((cb) => cb(sala));
+function notifySubscribers(code: string, room: Room | null): void {
+  const payload = JSON.stringify(room);
+  if (payload === lastPayloadByCode.get(code)) return;
+  lastPayloadByCode.set(code, payload);
+  subscribersByCode.get(code)?.forEach((cb) => cb(room));
 }
 
 export const httpRoomClient: RoomClient = {
-  async criarSala(input: CriarSalaInput) {
-    const resposta = await chamarApi<{ codigo: string; participanteId: string; token: string; sala: SalaRedigida }>(
+  async createRoom(input: CreateRoomInput) {
+    const response = await callApi<{ code: string; participantId: string; token: string; room: RedactedRoom }>(
       "/rooms",
       { method: "POST", body: JSON.stringify(input) },
     );
     return {
-      codigo: resposta.codigo,
-      sala: reconstruirSala(resposta.sala, resposta.participanteId),
-      token: resposta.token,
+      code: response.code,
+      room: rebuildRoom(response.room, response.participantId),
+      token: response.token,
     };
   },
 
-  async entrarNaSala(codigo: string, nomeParticipante: string) {
-    const resposta = await chamarApi<{ participanteId: string; token: string; sala: SalaRedigida }>(
-      `/rooms/${codigo}/participantes`,
-      { method: "POST", body: JSON.stringify({ nomeParticipante }) },
+  async joinRoom(code: string, participantName: string) {
+    const response = await callApi<{ participantId: string; token: string; room: RedactedRoom }>(
+      `/rooms/${code}/participants`,
+      { method: "POST", body: JSON.stringify({ participantName }) },
     );
     return {
-      participanteId: resposta.participanteId,
-      sala: reconstruirSala(resposta.sala, resposta.participanteId),
-      token: resposta.token,
+      participantId: response.participantId,
+      room: rebuildRoom(response.room, response.participantId),
+      token: response.token,
     };
   },
 
-  async obterSala(codigo: string) {
-    return buscarSala(codigo);
+  async getRoom(code: string) {
+    return fetchRoom(code);
   },
 
-  assinarSala(codigo: string, callback: (sala: Sala | null) => void) {
-    if (!assinantesPorCodigo.has(codigo)) {
-      assinantesPorCodigo.set(codigo, new Set());
+  subscribeToRoom(code: string, callback: (room: Room | null) => void) {
+    if (!subscribersByCode.has(code)) {
+      subscribersByCode.set(code, new Set());
     }
-    const assinantes = assinantesPorCodigo.get(codigo)!;
-    assinantes.add(callback);
+    const subscribers = subscribersByCode.get(code)!;
+    subscribers.add(callback);
 
-    async function consultar() {
-      const sala = await buscarSala(codigo).catch(() => undefined);
-      // Se a inscrição já foi cancelada (ou outra chamada mais recente já
-      // notificou), o `Set` não contém mais este `callback` — mas a
-      // notificação é sempre para todos os assinantes atuais do código, não
-      // só para quem disparou o `consultar`, então isso é seguro mesmo com
-      // respostas atrasadas chegando fora de ordem.
-      if (sala === undefined) return;
-      notificarAssinantes(codigo, sala);
+    async function poll() {
+      const room = await fetchRoom(code).catch(() => undefined);
+      // If the subscription was already canceled (or a more recent call
+      // already notified), the `Set` no longer contains this `callback` —
+      // but the notification always goes to every current subscriber of the
+      // code, not just whoever triggered `poll`, so this is safe even with
+      // delayed responses arriving out of order.
+      if (room === undefined) return;
+      notifySubscribers(code, room);
     }
 
-    void consultar();
-    const intervalo = setInterval(consultar, INTERVALO_POLLING_MS);
+    void poll();
+    const interval = setInterval(poll, POLLING_INTERVAL_MS);
 
     return () => {
-      assinantes.delete(callback);
-      clearInterval(intervalo);
-      if (assinantes.size === 0) {
-        assinantesPorCodigo.delete(codigo);
-        ultimoPayloadPorCodigo.delete(codigo);
+      subscribers.delete(callback);
+      clearInterval(interval);
+      if (subscribers.size === 0) {
+        subscribersByCode.delete(code);
+        lastPayloadByCode.delete(code);
       }
     };
   },
 
-  async sairDaSala(codigo: string, participanteId: string) {
-    const identidade = identidadeAtual(codigo);
-    const query = identidade?.token ? `?token=${encodeURIComponent(identidade.token)}` : "";
-    // `keepalive` evita que o navegador aborte esta chamada quando ela é
-    // disparada durante o descarregamento da página (ex.: um futuro botão
-    // de sair chamado perto de um beforeunload/navegação).
-    await chamarApi<void>(`/rooms/${codigo}/participantes/${participanteId}${query}`, {
+  async leaveRoom(code: string, participantId: string) {
+    const identity = currentIdentity(code);
+    const query = identity?.token ? `?token=${encodeURIComponent(identity.token)}` : "";
+    // `keepalive` prevents the browser from aborting this call when it's
+    // fired during page unload (e.g., a future leave button called near a
+    // beforeunload/navigation).
+    await callApi<void>(`/rooms/${code}/participants/${participantId}${query}`, {
       method: "DELETE",
       keepalive: true,
     });
   },
 
-  async enviarPresenca(codigo: string, participanteId: string) {
-    const token = identidadeAtual(codigo)?.token ?? "";
-    await chamarApi<void>(`/rooms/${codigo}/heartbeat`, {
+  async sendHeartbeat(code: string, participantId: string) {
+    const token = currentIdentity(code)?.token ?? "";
+    await callApi<void>(`/rooms/${code}/heartbeat`, {
       method: "POST",
-      body: JSON.stringify({ participanteId, token }),
+      body: JSON.stringify({ participantId, token }),
     });
   },
 
-  async votar(codigo: string, participanteId: string, valor: string) {
-    const token = identidadeAtual(codigo)?.token ?? "";
-    const bruta = await chamarApi<SalaRedigida>(`/rooms/${codigo}/votos`, {
+  async vote(code: string, participantId: string, value: string) {
+    const token = currentIdentity(code)?.token ?? "";
+    const raw = await callApi<RedactedRoom>(`/rooms/${code}/votes`, {
       method: "POST",
-      body: JSON.stringify({ participanteId, token, valor }),
+      body: JSON.stringify({ participantId, token, value }),
     });
-    const sala = reconstruirSala(bruta, participanteId);
-    notificarAssinantes(codigo, sala);
-    return sala;
+    const room = rebuildRoom(raw, participantId);
+    notifySubscribers(code, room);
+    return room;
   },
 
-  async revelar(codigo: string, participanteId: string) {
-    const token = identidadeAtual(codigo)?.token ?? "";
-    const bruta = await chamarApi<SalaRedigida>(`/rooms/${codigo}/revelar`, {
+  async reveal(code: string, participantId: string) {
+    const token = currentIdentity(code)?.token ?? "";
+    const raw = await callApi<RedactedRoom>(`/rooms/${code}/reveal`, {
       method: "POST",
-      body: JSON.stringify({ participanteId, token }),
+      body: JSON.stringify({ participantId, token }),
     });
-    const sala = reconstruirSala(bruta, participanteId);
-    notificarAssinantes(codigo, sala);
-    return sala;
+    const room = rebuildRoom(raw, participantId);
+    notifySubscribers(code, room);
+    return room;
   },
 
-  async resetar(codigo: string, participanteId: string) {
-    const token = identidadeAtual(codigo)?.token ?? "";
-    const bruta = await chamarApi<SalaRedigida>(`/rooms/${codigo}/resetar`, {
+  async reset(code: string, participantId: string) {
+    const token = currentIdentity(code)?.token ?? "";
+    const raw = await callApi<RedactedRoom>(`/rooms/${code}/reset`, {
       method: "POST",
-      body: JSON.stringify({ participanteId, token }),
+      body: JSON.stringify({ participantId, token }),
     });
-    const sala = reconstruirSala(bruta, participanteId);
-    notificarAssinantes(codigo, sala);
-    return sala;
+    const room = rebuildRoom(raw, participantId);
+    notifySubscribers(code, room);
+    return room;
   },
 };

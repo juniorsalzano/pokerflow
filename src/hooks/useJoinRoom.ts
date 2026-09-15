@@ -2,30 +2,30 @@ import { useCallback, useState } from "react";
 import { roomClient } from "../services/roomClient";
 import { RoomClientError } from "../types/room";
 
-export function useJoinRoom(codigo: string) {
-  const [erro, setErro] = useState<string | null>(null);
-  const [carregando, setCarregando] = useState(false);
+export function useJoinRoom(code: string) {
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const entrar = useCallback(
-    async (nomeParticipante: string): Promise<{ participanteId: string; token?: string } | undefined> => {
-      setErro(null);
-      setCarregando(true);
+  const join = useCallback(
+    async (participantName: string): Promise<{ participantId: string; token?: string } | undefined> => {
+      setError(null);
+      setLoading(true);
       try {
-        const { participanteId, token } = await roomClient.entrarNaSala(codigo, nomeParticipante);
-        return { participanteId, token };
+        const { participantId, token } = await roomClient.joinRoom(code, participantName);
+        return { participantId, token };
       } catch (e) {
         if (e instanceof RoomClientError) {
-          setErro(e.message);
+          setError(e.message);
         } else {
-          setErro("Não foi possível entrar na sala. Tente novamente.");
+          setError("Não foi possível entrar na sala. Tente novamente.");
         }
         return undefined;
       } finally {
-        setCarregando(false);
+        setLoading(false);
       }
     },
-    [codigo],
+    [code],
   );
 
-  return { entrar, erro, carregando };
+  return { join, error, loading };
 }

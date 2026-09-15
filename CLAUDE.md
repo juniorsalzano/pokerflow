@@ -90,6 +90,14 @@ Guia para decisões visuais futuras (animações, cores, microcopy):
   pouco de seriedade" — o eixo principal é profissionalismo, o tempero é a
   leveza.
 
+**Exceção deliberada — confete no consenso (spec 004)**: o painel de resultado
+da revelação dispara uma animação curta de confete ("burst", poucos segundos,
+sem confete contínuo) quando a rodada fecha em consenso total. É uma exceção
+pontual à regra "sem excesso de animação/confete" acima, limitada a esse
+momento específico — não é uma mudança geral de tom. Continua valendo sem
+mascote, personagem ou emoji decorativo em qualquer caso. Ver
+[specs/004-revelacao-resultado/spec.md](specs/004-revelacao-resultado/spec.md).
+
 ## Idioma
 
 - Artefatos do Spec Kit (spec.md, plan.md, tasks.md, checklists) → **português (pt-BR)**.

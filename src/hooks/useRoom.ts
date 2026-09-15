@@ -1,28 +1,28 @@
 import { useEffect, useState } from "react";
 import { roomClient } from "../services/roomClient";
-import { Sala } from "../types/room";
+import { Room } from "../types/room";
 
 /**
- * Mantém a sala atualizada em tempo real (SC-004: até poucos segundos),
- * assinando roomClient.assinarSala. `carregando` é true só até a primeira
- * leitura resolver; depois disso, `sala === null` significa "não encontrada".
+ * Keeps the room updated in real time (SC-004: within a few seconds),
+ * subscribing to roomClient.subscribeToRoom. `loading` is true only until
+ * the first read resolves; after that, `room === null` means "not found".
  */
-export function useRoom(codigo: string | undefined) {
-  const [sala, setSala] = useState<Sala | null>(null);
-  const [carregando, setCarregando] = useState(true);
+export function useRoom(code: string | undefined) {
+  const [room, setRoom] = useState<Room | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!codigo) {
-      setCarregando(false);
+    if (!code) {
+      setLoading(false);
       return;
     }
-    setCarregando(true);
-    const cancelar = roomClient.assinarSala(codigo, (salaAtual) => {
-      setSala(salaAtual);
-      setCarregando(false);
+    setLoading(true);
+    const unsubscribe = roomClient.subscribeToRoom(code, (currentRoom) => {
+      setRoom(currentRoom);
+      setLoading(false);
     });
-    return cancelar;
-  }, [codigo]);
+    return unsubscribe;
+  }, [code]);
 
-  return { sala, carregando };
+  return { room, loading };
 }

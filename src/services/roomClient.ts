@@ -1,39 +1,39 @@
-import { CriarSalaInput, Participante, Sala } from "../types/room";
+import { CreateRoomInput, Participant, Room } from "../types/room";
 
 /**
- * Fronteira única entre a UI e a fonte de dados (contracts/api-contract.md).
- * Hoje implementada por mock/mockRoomClient.ts; quando a API real existir,
- * uma implementação http/httpRoomClient.ts segue exatamente este contrato.
+ * Single boundary between the UI and the data source (contracts/api-contract.md).
+ * Today implemented by mock/mockRoomClient.ts; when the real API exists, an
+ * http/httpRoomClient.ts implementation follows this exact contract.
  */
 export interface RoomClient {
-  criarSala(input: CriarSalaInput): Promise<{ codigo: string; sala: Sala; token?: string }>;
+  createRoom(input: CreateRoomInput): Promise<{ code: string; room: Room; token?: string }>;
 
-  entrarNaSala(
-    codigo: string,
-    nomeParticipante: string,
-  ): Promise<{ participanteId: string; sala: Sala; token?: string }>;
+  joinRoom(
+    code: string,
+    participantName: string,
+  ): Promise<{ participantId: string; room: Room; token?: string }>;
 
-  obterSala(codigo: string): Promise<Sala | null>;
+  getRoom(code: string): Promise<Room | null>;
 
-  assinarSala(codigo: string, callback: (sala: Sala | null) => void): () => void;
+  subscribeToRoom(code: string, callback: (room: Room | null) => void): () => void;
 
-  sairDaSala(codigo: string, participanteId: string): Promise<void>;
+  leaveRoom(code: string, participantId: string): Promise<void>;
 
-  /** Sinal periódico de presença (FR-010) — mantém o participante ativo na sala. No-op no mock (research.md §14, feature 003). */
-  enviarPresenca(codigo: string, participanteId: string): Promise<void>;
+  /** Periodic presence signal (FR-010) — keeps the participant active in the room. No-op in the mock (research.md §14, feature 003). */
+  sendHeartbeat(code: string, participantId: string): Promise<void>;
 
-  votar(codigo: string, participanteId: string, valor: string): Promise<Sala>;
+  vote(code: string, participantId: string, value: string): Promise<Room>;
 
-  revelar(codigo: string, participanteId: string): Promise<Sala>;
+  reveal(code: string, participantId: string): Promise<Room>;
 
-  resetar(codigo: string, participanteId: string): Promise<Sala>;
+  reset(code: string, participantId: string): Promise<Room>;
 }
 
-export type { Participante, Sala };
+export type { Participant, Room };
 
-// Ponto único de wiring: usa a API real (http/httpRoomClient.ts) quando
-// VITE_API_BASE_URL está definida; senão cai no mock — nenhum componente
-// muda em nenhum dos dois casos (feature 003).
+// Single wiring point: uses the real API (http/httpRoomClient.ts) when
+// VITE_API_BASE_URL is defined; otherwise falls back to the mock — no
+// component changes in either case (feature 003).
 import { mockRoomClient } from "./mock/mockRoomClient";
 import { httpRoomClient } from "./http/httpRoomClient";
 
