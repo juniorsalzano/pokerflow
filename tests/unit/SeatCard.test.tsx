@@ -63,4 +63,21 @@ describe("SeatCard — visibilidade do próprio voto (FR-004a)", () => {
     render(<SeatCard participant={meParticipant} vote="8" revealed={true} isMe={true} />);
     expect(screen.getByText("8")).toBeInTheDocument();
   });
+
+  it("recria o elemento da carta ao trocar de voto, para o flip (animation) reexecutar", () => {
+    const { rerender } = render(
+      <SeatCard participant={meParticipant} vote="8" revealed={false} isMe={true} />,
+    );
+    const firstFlipper = screen.getByText("8").parentElement;
+
+    rerender(<SeatCard participant={meParticipant} vote="5" revealed={false} isMe={true} />);
+
+    expect(screen.getByText("5")).toBeInTheDocument();
+    const secondFlipper = screen.getByText("5").parentElement;
+    // Precisa ser um nó NOVO (não o mesmo reaproveitado): a animação CSS do
+    // flip só toca em mount, não quando o conteúdo de um nó existente muda —
+    // é isso que garante que ela reexecute a cada troca de voto, não só na
+    // primeira vez.
+    expect(secondFlipper).not.toBe(firstFlipper);
+  });
 });

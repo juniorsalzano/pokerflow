@@ -22,12 +22,26 @@
   width: 100%;
   height: 100%;
   transform-style: preserve-3d;
-  transition: transform 0.5s ease;
   transform: rotateY(0deg);
 }
 
+/* Animation (not a transition) on purpose: a transition only fires on a
+   property CHANGE, so it wouldn't replay when the shown value changes while
+   already revealed (own card, changing vote — the class stays "revealed"
+   throughout, only the number inside differs). An animation, keyed by the
+   vote's value in SeatCard.tsx, replays the exact same half-turn every time
+   that key changes, including the very first reveal. */
 .card.revealed .flipper {
-  transform: rotateY(180deg);
+  animation: flip 0.5s ease forwards;
+}
+
+@keyframes flip {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(180deg);
+  }
 }
 
 .cardBack,

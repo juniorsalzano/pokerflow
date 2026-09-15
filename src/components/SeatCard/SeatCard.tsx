@@ -1,4 +1,5 @@
 import { Participant } from "../../types/room";
+import { shortenName } from "../../services/avatar";
 import CardValue from "../CardValue/CardValue";
 import styles from "./SeatCard.module.css";
 
@@ -59,7 +60,7 @@ export default function SeatCard({ participant, vote, revealed, isMe, index = 0 
               : `${participant.name}: já votou`
         }
       >
-        <div className={styles.flipper}>
+        <div key={vote ?? "no-vote"} className={styles.flipper}>
           <div className={styles.cardBack} aria-hidden={showValue}>
             <span className={styles.backMark} />
           </div>
@@ -68,8 +69,11 @@ export default function SeatCard({ participant, vote, revealed, isMe, index = 0 
           </div>
         </div>
       </div>
-      <span className={[styles.name, isMe && styles.isMe].filter(Boolean).join(" ")}>
-        {participant.name}
+      <span
+        className={[styles.name, isMe && styles.isMe].filter(Boolean).join(" ")}
+        title={participant.name}
+      >
+        {shortenName(participant.name)}
         {isMe && " (você)"}
       </span>
       {revealed && !hasVoted && <span className={styles.notVoted}>Não votou</span>}

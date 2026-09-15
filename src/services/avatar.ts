@@ -23,6 +23,22 @@ export function initialsOf(name: string): string {
   return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
 }
 
+/**
+ * Shortens a long name for display in tight spaces (e.g. the seat card
+ * grid), keeping the first and last name in full and reducing any name(s)
+ * in between to a single uppercase initial — e.g. "Edson Roberto Salzano
+ * Junior" becomes "Edson R S Junior". Names with up to two parts are
+ * returned unchanged, since there's nothing to shorten.
+ */
+export function shortenName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 2) return parts.join(" ");
+  const first = parts[0];
+  const last = parts[parts.length - 1];
+  const middleInitials = parts.slice(1, -1).map((part) => part.charAt(0).toUpperCase());
+  return [first, ...middleInitials, last].join(" ");
+}
+
 /** Simple, deterministic hash of a string, used to pick the avatar color. */
 function hash(text: string): number {
   let h = 0;

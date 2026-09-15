@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { avatarOf, initialsOf } from "../../src/services/avatar";
+import { avatarOf, initialsOf, shortenName } from "../../src/services/avatar";
 import { Participant } from "../../src/types/room";
 
 const VALID_COLORS = ["var(--accent-a)", "var(--accent-b)", "var(--btn-a)", "var(--btn-b)"];
@@ -19,6 +19,28 @@ describe("initialsOf", () => {
 
   it("ignora espaços extras", () => {
     expect(initialsOf("  Carla   Dias  ")).toBe("CD");
+  });
+});
+
+describe("shortenName", () => {
+  it("mantém nomes de uma palavra sem alteração", () => {
+    expect(shortenName("Bruno")).toBe("Bruno");
+  });
+
+  it("mantém nomes de duas palavras sem alteração", () => {
+    expect(shortenName("Ana Costa")).toBe("Ana Costa");
+  });
+
+  it("abrevia nomes do meio para uma inicial maiúscula, mantendo primeiro e último por extenso", () => {
+    expect(shortenName("Edson Roberto Salzano Junior")).toBe("Edson R S Junior");
+  });
+
+  it("funciona com apenas um nome do meio", () => {
+    expect(shortenName("Edson Salzano Junior")).toBe("Edson S Junior");
+  });
+
+  it("ignora espaços extras", () => {
+    expect(shortenName("  Edson   Roberto   Junior  ")).toBe("Edson R Junior");
   });
 });
 
