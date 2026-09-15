@@ -1,4 +1,5 @@
 import { RevealPhase } from "../../hooks/useRevealTransition";
+import LoadingIcon from "../LoadingIcon/LoadingIcon";
 import styles from "./TablePanel.module.css";
 
 interface TablePanelProps {
@@ -25,7 +26,10 @@ export default function TablePanel({ phase, countdownNumber }: TablePanelProps) 
       )}
 
       {(phase === "flipping" || phase === "leaving") && (
-        <p className={styles.status}>Revelando…</p>
+        <p className={`${styles.status} ${styles.statusRow}`}>
+          <LoadingIcon size={24} />
+          Revelando…
+        </p>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import LoadingIcon from "../LoadingIcon/LoadingIcon";
 import { CreateRoomInput, PointScale, POINT_SCALE_LABELS } from "../../types/room";
 import styles from "./CreateRoomForm.module.css";
 
@@ -88,8 +89,14 @@ export default function CreateRoomForm({ onSubmit, loading, error }: CreateRoomF
 
       {error && <p className={styles.generalError}>{error}</p>}
 
-      <button type="submit" className={styles.cta} disabled={loading}>
-        {loading ? "Criando..." : "Criar sala →"}
+      <button
+        type="submit"
+        className={styles.cta}
+        disabled={loading}
+        aria-busy={loading}
+        aria-label={loading ? "Criando sala" : undefined}
+      >
+        {loading ? <LoadingIcon size={28} /> : "Criar sala →"}
       </button>
       <p className={styles.helper}>
         Você recebe um link para convidar o time na próxima tela.

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import GroupedResult from "../components/GroupedResult/GroupedResult";
 import HandOfCards from "../components/HandOfCards/HandOfCards";
 import JoinRoomForm from "../components/JoinRoomForm/JoinRoomForm";
+import LoadingIcon from "../components/LoadingIcon/LoadingIcon";
 import RoundControls from "../components/RoundControls/RoundControls";
 import SeatCard from "../components/SeatCard/SeatCard";
 import TablePanel from "../components/TablePanel/TablePanel";
@@ -156,7 +157,10 @@ export default function RoomPage() {
   if (loading) {
     return (
       <div className={styles.centeredStage}>
-        <p className={styles.message}>Carregando sala…</p>
+        <p className={`${styles.message} ${styles.loadingMessage}`}>
+          <LoadingIcon size={40} />
+          Carregando sala…
+        </p>
       </div>
     );
   }

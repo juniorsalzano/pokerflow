@@ -1,0 +1,29 @@
+.stage {
+  display: inline-block;
+  perspective: 240px;
+  flex-shrink: 0;
+}
+
+.spinner {
+  display: block;
+  animation: spin 1.1s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+
+.shape {
+  fill: var(--accent-a);
+}
+
+@keyframes spin {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}

@@ -47,6 +47,14 @@
   margin: 0;
 }
 
+.loadingMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
 .app {
   width: 100%;
   min-height: 100vh;

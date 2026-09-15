@@ -1,4 +1,5 @@
 import { FormEvent, useState } from "react";
+import LoadingIcon from "../LoadingIcon/LoadingIcon";
 import styles from "./JoinRoomForm.module.css";
 
 interface JoinRoomFormProps {
@@ -44,8 +45,14 @@ export default function JoinRoomForm({ roomName, onSubmit, loading, error }: Joi
 
       {error && <p className={styles.generalError}>{error}</p>}
 
-      <button type="submit" className={styles.cta} disabled={loading}>
-        {loading ? "Entrando..." : "Entrar na sala →"}
+      <button
+        type="submit"
+        className={styles.cta}
+        disabled={loading}
+        aria-busy={loading}
+        aria-label={loading ? "Entrando na sala" : undefined}
+      >
+        {loading ? <LoadingIcon size={28} /> : "Entrar na sala →"}
       </button>
     </form>
   );
