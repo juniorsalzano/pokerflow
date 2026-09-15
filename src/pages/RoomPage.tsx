@@ -95,6 +95,25 @@ export default function RoomPage() {
   const { vote, reveal, reset, error: roundError } = useRound(code, identity?.participantId);
   const leaveRoom = useLeaveRoom(code, identity?.participantId);
 
+  // Optimistic vote: the clicked card flips right away, without waiting for
+  // the network round-trip — `vote` (useRound) already awaits the API call
+  // before the real value shows up via `myVote`/polling, which made the
+  // flip feel laggy. Cleared once that call settles (success or failure) —
+  // from then on, `myVote` alone is the source of truth again. `pendingVoteRef`
+  // guards against an earlier, slower call clearing a newer selection if the
+  // user switches votes again before the first request comes back.
+  const [optimisticVote, setOptimisticVote] = useState<string | undefined>(undefined);
+  const pendingVoteRef = useRef<string | undefined>(undefined);
+
+  async function handleVote(value: string) {
+    pendingVoteRef.current = value;
+    setOptimisticVote(value);
+    await vote(value);
+    if (pendingVoteRef.current === value) {
+      setOptimisticVote(undefined);
+    }
+  }
+
   const isParticipant =
     !!identity && !!room?.participants.some((p) => p.id === identity.participantId);
 
@@ -277,7 +296,7 @@ export default function RoomPage() {
             <SeatCard
               key={p.id}
               participant={p}
-              vote={room.round.votes[p.id]}
+              vote={p.id === identity?.participantId ? (optimisticVote ?? room.round.votes[p.id]) : room.round.votes[p.id]}
               revealed={revealed}
               isMe={p.id === identity?.participantId}
               index={index}
@@ -298,9 +317,9 @@ export default function RoomPage() {
         ) : (
           <HandOfCards
             values={POINT_SCALES[room.pointScale]}
-            selectedValue={myVote}
+            selectedValue={optimisticVote ?? myVote}
             disabled={roundRevealed}
-            onVote={vote}
+            onVote={handleVote}
             leaving={phase === "leaving"}
             entering={phase === "returning"}
           />
