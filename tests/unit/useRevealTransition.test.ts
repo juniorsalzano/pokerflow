@@ -122,4 +122,25 @@ describe("useRevealTransition — máquina de fases (data-model.md §RevealPhase
     rerender({ state: "voting" });
     expect(result.current.phase).toBe("voting");
   });
+
+  it("bug relatado em uso real: quem monta o hook com a rodada JÁ revelada (entrou depois) vai direto para 'result', sem tocar a animação de countdown/flip", () => {
+    const { result } = mount(3, 5, "revealed");
+
+    expect(result.current.phase).toBe("result");
+    expect(result.current.countdownNumber).toBeNull();
+
+    // Nenhum timer pendente da "animação" que nunca deveria ter começado —
+    // avançar bastante tempo não deve mudar nada.
+    act(() => vi.advanceTimersByTime(10_000));
+    expect(result.current.phase).toBe("result");
+  });
+
+  it("uma revelação de verdade, ao vivo, continua animando normalmente mesmo depois de já ter montado em 'voting' (regressão)", () => {
+    const { result, rerender } = mount(2, 3, "voting");
+    expect(result.current.phase).toBe("voting");
+
+    rerender({ state: "revealed" });
+    expect(result.current.phase).toBe("countdown");
+    expect(result.current.countdownNumber).toBe(3);
+  });
 });
