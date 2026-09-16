@@ -251,6 +251,17 @@ export default function RoomPage() {
   const isModerator = identity?.participantId === room.moderatorId;
   const myVote = identity ? room.round.votes[identity.participantId] : undefined;
   const resultDistribution = revealed ? groupByValue(room) : null;
+  // Valor mais votado (maioria simples) para destacar na mesa quando o
+  // resultado aparece — a mesa ficava vazia nesse momento. Empate: fica
+  // com o primeiro grupo encontrado (o painel abaixo já mostra a
+  // distribuição completa, isso aqui é só um destaque, não a fonte da
+  // verdade).
+  const mostVotedGroup =
+    resultDistribution && resultDistribution.groups.length > 0
+      ? resultDistribution.groups.reduce((best, group) =>
+          group.participants.length > best.participants.length ? group : best,
+        )
+      : undefined;
 
   return (
     <div className={styles.app}>
@@ -303,7 +314,15 @@ export default function RoomPage() {
           </div>
         )}
 
-        <TablePanel phase={phase} countdownNumber={countdownNumber} />
+        <TablePanel
+          phase={phase}
+          countdownNumber={countdownNumber}
+          mostVoted={
+            mostVotedGroup
+              ? { value: mostVotedGroup.value, count: mostVotedGroup.participants.length, total: room.participants.length }
+              : undefined
+          }
+        />
 
         <ul className={styles.seats} aria-label="Participantes da sala">
           {room.participants.map((p, index) => (
