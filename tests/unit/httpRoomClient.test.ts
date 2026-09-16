@@ -278,3 +278,116 @@ describe("httpRoomClient — tratamento de erro (achado E1)", () => {
     expect(caughtError).not.toBeInstanceOf(RoomClientError);
   });
 });
+
+describe("httpRoomClient — timeout no cliente (spec 005, FR-006/FR-007)", () => {
+  it("uma chamada que nunca responde rejeita em ~10s, com um erro comum (não RoomClientError)", async () => {
+    vi.useFakeTimers();
+    // `fetch` nunca resolve nem rejeita por conta própria — só o abort (via
+    // o timeout interno de callApi) deve encerrar a chamada.
+    const fetchMock = vi.fn().mockImplementation(
+      (_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            const error = new Error("The operation was aborted.");
+            error.name = "AbortError";
+            reject(error);
+          });
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const promise = httpRoomClient.vote("abc1234", "p1", "5");
+    const assertion = expect(promise).rejects.not.toBeInstanceOf(RoomClientError);
+
+    await vi.advanceTimersByTimeAsync(10_000);
+    await assertion;
+
+    vi.useRealTimers();
+  });
+
+  it("uma resposta normal, dentro do tempo, não é afetada pelo timeout (regressão)", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: "abc1234",
+          name: "Sala",
+          pointScale: "fibonacci",
+          moderatorId: "p1",
+          participants: [{ id: "p1", name: "Ana", isModerator: true, joinedAt: 1 }],
+          createdAt: 1,
+          lastActivityAt: 1,
+          round: { state: "voting", voters: [] },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const room = await httpRoomClient.getRoom("abc1234");
+    expect(room?.code).toBe("abc1234");
+
+    vi.useRealTimers();
+  });
+});
+
+describe("httpRoomClient — sala encerrada pelo moderador (spec 005, US1)", () => {
+  it("subscribeToRoom notifica o assinante com (null, RoomClientError ROOM_CLOSED_BY_MODERATOR) em vez de engolir o erro", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonResponse(410, { code: "ROOM_CLOSED_BY_MODERATOR", message: "A sala foi encerrada porque o moderador saiu." }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const callback = vi.fn();
+    const unsubscribe = httpRoomClient.subscribeToRoom("abc1234", callback);
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledTimes(1));
+
+    expect(callback).toHaveBeenCalledWith(null, expect.any(RoomClientError));
+    const [, error] = callback.mock.calls[0];
+    expect(error.code).toBe("ROOM_CLOSED_BY_MODERATOR");
+
+    unsubscribe();
+  });
+
+  it("uma falha de rede comum durante o polling continua sendo engolida (regressão) — não chama o assinante", async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const callback = vi.fn();
+    const unsubscribe = httpRoomClient.subscribeToRoom("abc1234", callback);
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(callback).not.toHaveBeenCalled();
+    unsubscribe();
+  });
+});
+
+describe("httpRoomClient — remoção de participante pelo moderador (spec 005, US3)", () => {
+  it("kickParticipant faz DELETE com requesterId/requesterToken da própria identidade, alvo no caminho", async () => {
+    saveIdentity("abc1234", { participantId: "mod1", isModerator: true, token: "token-moderador" });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        jsonResponse(200, {
+          code: "abc1234",
+          name: "Sala",
+          pointScale: "fibonacci",
+          moderatorId: "mod1",
+          participants: [{ id: "mod1", name: "Ana", isModerator: true, joinedAt: 1 }],
+          createdAt: 1,
+          lastActivityAt: 1,
+          round: { state: "voting", voters: [] },
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await httpRoomClient.kickParticipant("abc1234", "alvo1");
+
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `${BASE_URL}/rooms/abc1234/participants/alvo1?requesterId=mod1&requesterToken=token-moderador`,
+      expect.objectContaining({ method: "DELETE" }),
+    );
+  });
+});

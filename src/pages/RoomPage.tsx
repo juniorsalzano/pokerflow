@@ -15,6 +15,7 @@ import { usePresence } from "../hooks/usePresence";
 import { useRevealTransition } from "../hooks/useRevealTransition";
 import { useRoom } from "../hooks/useRoom";
 import { useRound } from "../hooks/useRound";
+import { roomClient } from "../services/roomClient";
 import { fireConfetti, shouldShowConfetti } from "../services/confetti";
 import { getRoundSummary, groupByValue } from "../services/mock/roomStore";
 import { POINT_SCALES, POINT_SCALE_LABELS } from "../types/room";
@@ -89,7 +90,7 @@ function LeaveIcon() {
 export default function RoomPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { room, loading } = useRoom(code);
+  const { room, loading, closedError } = useRoom(code);
   const { identity, saveIdentity } = useModerator(code);
   const { join, error, loading: joining } = useJoinRoom(code ?? "");
   const { vote, reveal, reset, error: roundError } = useRound(code, identity?.participantId);
@@ -142,6 +143,14 @@ export default function RoomPage() {
     navigate("/");
   }
 
+  /** Moderator-only action (spec 005, US3) — simple confirmation before removing (FR-012). */
+  async function handleRemoveParticipant(participantId: string, participantName: string) {
+    if (!code) return;
+    const confirmed = window.confirm(`Remover ${participantName} da sala?`);
+    if (!confirmed) return;
+    await roomClient.kickParticipant(code, participantId);
+  }
+
   const [inviteStatus, setInviteStatus] = useState<InviteStatus>("idle");
   const inviteTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -184,6 +193,20 @@ export default function RoomPage() {
     );
   }
 
+  if (closedError?.code === "ROOM_CLOSED_BY_MODERATOR") {
+    return (
+      <div className={styles.centeredStage}>
+        <div className={styles.messageCard}>
+          <h1 className={styles.messageTitle}>Sala encerrada</h1>
+          <p className={styles.message}>
+            A sala foi encerrada porque o moderador saiu. Peça um novo link a quem
+            organizou a sessão se quiser continuar.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!room) {
     return (
       <div className={styles.centeredStage}>
@@ -192,6 +215,27 @@ export default function RoomPage() {
           <p className={styles.message}>
             Esse link não corresponde a nenhuma sala ativa no momento. Verifique o
             endereço ou peça um novo link para quem organizou a sessão.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Identidade local existe (não é "nunca entrou"), mas sumiu da lista de
+  // participantes da sala — foi removido pelo moderador (spec 005, FR-015).
+  // Precisa vir antes do formulário de entrada abaixo, que também é
+  // acionado quando `isParticipant` é falso, mas por um motivo diferente
+  // (nunca ter entrado).
+  const wasRemoved = !!identity && !room.participants.some((p) => p.id === identity.participantId);
+
+  if (wasRemoved) {
+    return (
+      <div className={styles.centeredStage}>
+        <div className={styles.messageCard}>
+          <h1 className={styles.messageTitle}>Você foi removido da sala</h1>
+          <p className={styles.message}>
+            O moderador removeu você desta sala. Entre novamente pelo link se quiser
+            voltar a participar.
           </p>
         </div>
       </div>
@@ -300,6 +344,11 @@ export default function RoomPage() {
               revealed={revealed}
               isMe={p.id === identity?.participantId}
               index={index}
+              onRemove={
+                isModerator && p.id !== identity?.participantId
+                  ? () => handleRemoveParticipant(p.id, p.name)
+                  : undefined
+              }
             />
           ))}
         </ul>

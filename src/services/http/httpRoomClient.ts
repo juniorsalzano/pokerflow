@@ -5,6 +5,14 @@ import { CreateRoomInput, RoomClientErrorCode, RoomClientError, Room } from "../
 const POLLING_INTERVAL_MS = 2000;
 /** Placeholder for another participant's vote not yet revealed — never the real value (finding D1). */
 const HIDDEN_VOTE_PLACEHOLDER = "•";
+/**
+ * Client-side timeout for every API call (spec 005, FR-006/FR-007,
+ * research.md decision 1) — long enough to absorb a typical serverless cold
+ * start, short enough that no action leaves the UI stuck waiting forever.
+ * On timeout, `fetch` rejects (via `AbortController`) with the same shape as
+ * any other network failure — never a `RoomClientError`.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 function baseUrl(): string {
   return import.meta.env.VITE_API_BASE_URL ?? "";
@@ -35,10 +43,19 @@ interface ErrorBody {
  * again" message for any error that isn't a `RoomClientError`.
  */
 async function callApi<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${baseUrl()}${path}`, {
-    ...init,
-    headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl()}${path}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 
   if (!response.ok) {
     let body: ErrorBody | undefined;
@@ -108,14 +125,14 @@ async function fetchRoom(code: string): Promise<Room | null> {
 // itself right away (see `notifySubscribers`), instead of depending on the
 // next polling tick (up to POLLING_INTERVAL_MS of perceptible delay on the
 // "effect" of the action itself).
-const subscribersByCode = new Map<string, Set<(room: Room | null) => void>>();
+const subscribersByCode = new Map<string, Set<(room: Room | null, error?: RoomClientError) => void>>();
 const lastPayloadByCode = new Map<string, string | null>();
 
-function notifySubscribers(code: string, room: Room | null): void {
-  const payload = JSON.stringify(room);
+function notifySubscribers(code: string, room: Room | null, error?: RoomClientError): void {
+  const payload = `${error?.code ?? ""}:${JSON.stringify(room)}`;
   if (payload === lastPayloadByCode.get(code)) return;
   lastPayloadByCode.set(code, payload);
-  subscribersByCode.get(code)?.forEach((cb) => cb(room));
+  subscribersByCode.get(code)?.forEach((cb) => cb(room, error));
 }
 
 export const httpRoomClient: RoomClient = {
@@ -147,7 +164,7 @@ export const httpRoomClient: RoomClient = {
     return fetchRoom(code);
   },
 
-  subscribeToRoom(code: string, callback: (room: Room | null) => void) {
+  subscribeToRoom(code: string, callback: (room: Room | null, error?: RoomClientError) => void) {
     if (!subscribersByCode.has(code)) {
       subscribersByCode.set(code, new Set());
     }
@@ -155,14 +172,19 @@ export const httpRoomClient: RoomClient = {
     subscribers.add(callback);
 
     async function poll() {
-      const room = await fetchRoom(code).catch(() => undefined);
-      // If the subscription was already canceled (or a more recent call
-      // already notified), the `Set` no longer contains this `callback` —
-      // but the notification always goes to every current subscriber of the
-      // code, not just whoever triggered `poll`, so this is safe even with
-      // delayed responses arriving out of order.
-      if (room === undefined) return;
-      notifySubscribers(code, room);
+      try {
+        const room = await fetchRoom(code);
+        notifySubscribers(code, room);
+      } catch (e) {
+        // Spec 005 (FR-005): a room closed by the moderator is a dedicated,
+        // user-facing state — surfaced to subscribers instead of swallowed.
+        // Any other failure (network hiccup, timeout, unexpected error) is
+        // swallowed here on purpose: a single missed poll shouldn't flip the
+        // screen to an error state, the next tick tries again.
+        if (e instanceof RoomClientError && e.code === "ROOM_CLOSED_BY_MODERATOR") {
+          notifySubscribers(code, null, e);
+        }
+      }
     }
 
     void poll();
@@ -188,6 +210,17 @@ export const httpRoomClient: RoomClient = {
       method: "DELETE",
       keepalive: true,
     });
+  },
+
+  async kickParticipant(code: string, targetParticipantId: string) {
+    const identity = currentIdentity(code);
+    const query = identity
+      ? `?requesterId=${encodeURIComponent(identity.participantId)}&requesterToken=${encodeURIComponent(identity.token)}`
+      : "";
+    await callApi<void>(`/rooms/${code}/participants/${targetParticipantId}${query}`, {
+      method: "DELETE",
+    });
+    notifySubscribers(code, await fetchRoom(code).catch(() => null));
   },
 
   async sendHeartbeat(code: string, participantId: string) {
