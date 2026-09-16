@@ -1,0 +1,73 @@
+.container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  border-color: var(--accent-a);
+  color: var(--accent-a);
+}
+
+/* Absolutely positioned — opening/closing never affects the topbar's
+   height or pushes any other element (layout-shift-free by construction). */
+.menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  min-width: 176px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.item:hover {
+  background: var(--surface-elevated);
+}
+
+.itemDanger {
+  color: var(--warn-text);
+}
+
+.itemDanger:hover {
+  background: var(--warn-bg);
+}

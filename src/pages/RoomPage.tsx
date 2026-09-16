@@ -8,6 +8,7 @@ import RoundControls from "../components/RoundControls/RoundControls";
 import SeatCard from "../components/SeatCard/SeatCard";
 import TablePanel from "../components/TablePanel/TablePanel";
 import ThemeToggle from "../components/ThemeToggle/ThemeToggle";
+import TopbarMenu from "../components/TopbarMenu/TopbarMenu";
 import { useJoinRoom } from "../hooks/useJoinRoom";
 import { clearIdentity, useModerator } from "../hooks/useModerator";
 import { useLeaveRoom } from "../hooks/useLeaveRoom";
@@ -56,28 +57,6 @@ function InviteIcon({ status }: { status: InviteStatus }) {
       />
       <path
         d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-/** Ícone de "sair da sala" (porta + seta) — usado num botão só de ícone na topbar. */
-function LeaveIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M16 17l5-5-5-5M21 12H9"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
@@ -311,16 +290,7 @@ export default function RoomPage() {
                 ? "Erro ao copiar"
                 : "Convidar time"}
           </button>
-          <ThemeToggle />
-          <button
-            type="button"
-            className={styles.leave}
-            onClick={handleLeave}
-            title="Sair da sala"
-            aria-label="Sair da sala"
-          >
-            <LeaveIcon />
-          </button>
+          <TopbarMenu onLeave={handleLeave} />
         </div>
       </div>
 
