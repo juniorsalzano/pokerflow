@@ -65,6 +65,14 @@
   color: var(--text-muted);
 }
 
+.mostVotedValues {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .mostVotedValue {
   display: inline-flex;
   align-items: center;
@@ -79,6 +87,15 @@
   font-weight: 700;
   font-size: 34px;
   box-shadow: 0 14px 28px rgba(139, 92, 246, 0.35);
+}
+
+/* Empate: cada valor fica menor pra caber lado a lado sem estourar a
+   largura do painel, mesmo com 3+ valores empatados. */
+.mostVotedValueTied {
+  min-width: 52px;
+  height: 52px;
+  font-size: 22px;
+  border-radius: 14px;
 }
 
 .mostVotedCount {

@@ -251,17 +251,19 @@ export default function RoomPage() {
   const isModerator = identity?.participantId === room.moderatorId;
   const myVote = identity ? room.round.votes[identity.participantId] : undefined;
   const resultDistribution = revealed ? groupByValue(room) : null;
-  // Valor mais votado (maioria simples) para destacar na mesa quando o
-  // resultado aparece — a mesa ficava vazia nesse momento. Empate: fica
-  // com o primeiro grupo encontrado (o painel abaixo já mostra a
-  // distribuição completa, isso aqui é só um destaque, não a fonte da
-  // verdade).
-  const mostVotedGroup =
+  // Valor(es) mais votado(s) para destacar na mesa quando o resultado
+  // aparece — a mesa ficava vazia nesse momento. Em caso de empate, mostra
+  // TODOS os valores empatados (rótulo vira "Empate") em vez de escolher um
+  // arbitrariamente — o painel abaixo já mostra a distribuição completa,
+  // isso aqui é só um destaque, não a fonte da verdade.
+  const maxVoteCount =
     resultDistribution && resultDistribution.groups.length > 0
-      ? resultDistribution.groups.reduce((best, group) =>
-          group.participants.length > best.participants.length ? group : best,
-        )
+      ? Math.max(...resultDistribution.groups.map((group) => group.participants.length))
       : undefined;
+  const mostVotedValues =
+    resultDistribution && maxVoteCount !== undefined
+      ? resultDistribution.groups.filter((group) => group.participants.length === maxVoteCount).map((group) => group.value)
+      : [];
 
   return (
     <div className={styles.app}>
@@ -318,8 +320,8 @@ export default function RoomPage() {
           phase={phase}
           countdownNumber={countdownNumber}
           mostVoted={
-            mostVotedGroup
-              ? { value: mostVotedGroup.value, count: mostVotedGroup.participants.length, total: room.participants.length }
+            mostVotedValues.length > 0 && maxVoteCount !== undefined
+              ? { values: mostVotedValues, count: maxVoteCount, total: room.participants.length }
               : undefined
           }
         />

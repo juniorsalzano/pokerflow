@@ -4,8 +4,9 @@ import LoadingIcon from "../LoadingIcon/LoadingIcon";
 import styles from "./TablePanel.module.css";
 
 interface MostVoted {
-  value: string;
-  /** How many participants voted this value. */
+  /** More than one value means a tie — all of them are shown, label switches to "Empate". */
+  values: string[];
+  /** How many participants voted each of `values` (same count for all of them when tied). */
   count: number;
   /** Total participants in the room (denominator for "X de Y votos"). */
   total: number;
@@ -47,12 +48,20 @@ export default function TablePanel({ phase, countdownNumber, mostVoted }: TableP
 
       {phase === "result" && mostVoted && (
         <div className={styles.mostVoted}>
-          <span className={styles.mostVotedLabel}>Mais votado</span>
-          <span className={styles.mostVotedValue}>
-            <CardValue value={mostVoted.value} />
-          </span>
+          <span className={styles.mostVotedLabel}>{mostVoted.values.length > 1 ? "Empate" : "Mais votado"}</span>
+          <div className={styles.mostVotedValues}>
+            {mostVoted.values.map((value) => (
+              <span
+                key={value}
+                className={`${styles.mostVotedValue} ${mostVoted.values.length > 1 ? styles.mostVotedValueTied : ""}`}
+              >
+                <CardValue value={value} />
+              </span>
+            ))}
+          </div>
           <span className={styles.mostVotedCount}>
             {mostVoted.count} de {mostVoted.total} {mostVoted.total === 1 ? "voto" : "votos"}
+            {mostVoted.values.length > 1 ? " cada" : ""}
           </span>
         </div>
       )}
