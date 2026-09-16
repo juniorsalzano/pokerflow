@@ -21,6 +21,8 @@ interface SeatCardProps {
   isMe: boolean;
   /** index in the list, used to stagger the flip animation on reveal (research.md §1). */
   index?: number;
+  /** Moderator-only action (spec 005, US3) — when set, shows a small remove button on this seat. */
+  onRemove?: () => void;
 }
 
 /**
@@ -35,7 +37,7 @@ interface SeatCardProps {
  *   revealed (`revealed`) or because this is the user's own seat (`isMe`,
  *   FR-004a — secrecy only applies to OTHER participants).
  */
-export default function SeatCard({ participant, vote, revealed, isMe, index = 0 }: SeatCardProps) {
+export default function SeatCard({ participant, vote, revealed, isMe, index = 0, onRemove }: SeatCardProps) {
   const hasVoted = vote !== undefined;
   const showValue = hasVoted && (revealed || isMe);
 
@@ -68,6 +70,24 @@ export default function SeatCard({ participant, vote, revealed, isMe, index = 0 
             {showValue && vote !== undefined && <CardValue value={vote} />}
           </div>
         </div>
+        {onRemove && (
+          <button
+            type="button"
+            className={styles.removeButton}
+            onClick={onRemove}
+            aria-label={`Remover ${participant.name} da sala`}
+            title={`Remover ${participant.name} da sala`}
+          >
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M6 6l12 12M18 6L6 18"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
+        )}
       </div>
       <span
         className={[styles.name, isMe && styles.isMe].filter(Boolean).join(" ")}

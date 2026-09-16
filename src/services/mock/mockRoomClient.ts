@@ -138,6 +138,12 @@ export const mockRoomClient: RoomClient = {
     saveRoom(updatedRoom);
   },
 
+  // No-op: the mock is out of scope for spec 005 (kept only as an easy
+  // rollback path per the constitution, not the production path) — a
+  // moderator can't remove anyone through it. See plan.md, research.md
+  // decision "Fora de escopo".
+  async kickParticipant() {},
+
   // No-op: the mock has no real server or connection timeout to detect —
   // the room only exists while the tab is open (localStorage), so there's no
   // "absence" to signal (research.md §14, feature 003).

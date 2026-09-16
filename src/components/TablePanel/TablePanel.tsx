@@ -1,20 +1,34 @@
 import { RevealPhase } from "../../hooks/useRevealTransition";
+import CardValue from "../CardValue/CardValue";
 import LoadingIcon from "../LoadingIcon/LoadingIcon";
 import styles from "./TablePanel.module.css";
+
+interface MostVoted {
+  /** More than one value means a tie — all of them are shown, label switches to "Empate". */
+  values: string[];
+  /** How many participants voted each of `values` (same count for all of them when tied). */
+  count: number;
+  /** Total participants in the room (denominator for "X de Y votos"). */
+  total: number;
+}
 
 interface TablePanelProps {
   phase: RevealPhase;
   /** 3, 2 or 1 during the "countdown" phase; ignored in other phases. */
   countdownNumber: number | null;
+  /** Shown only during "result" — the grouped breakdown itself lives below (GroupedResult), this is just a highlight so the table isn't empty. */
+  mostVoted?: MostVoted;
 }
 
 /**
  * Room screen's central panel ("the table", spec 004) — status only: a
- * simple message during voting, and a countdown on reveal. Never shows the
- * grouped result — it appears below the table, in place of "Suas cartas"
- * (see RoomPage), not here.
+ * simple message during voting, a countdown on reveal, and (spec 005-adjacent
+ * polish) a highlight of the most-voted value once the result is in, so the
+ * table doesn't sit empty right when everyone's looking at it. Never shows
+ * the full grouped result — that appears below the table, in place of "Suas
+ * cartas" (see RoomPage), not here.
  */
-export default function TablePanel({ phase, countdownNumber }: TablePanelProps) {
+export default function TablePanel({ phase, countdownNumber, mostVoted }: TablePanelProps) {
   return (
     <div className={styles.panel} aria-live="polite">
       {phase === "voting" && <p className={styles.status}>Escolham as cartas para votar.</p>}
@@ -30,6 +44,26 @@ export default function TablePanel({ phase, countdownNumber }: TablePanelProps) 
           <LoadingIcon size={24} />
           Revelando…
         </p>
+      )}
+
+      {phase === "result" && mostVoted && (
+        <div className={styles.mostVoted}>
+          <span className={styles.mostVotedLabel}>{mostVoted.values.length > 1 ? "Empate" : "Mais votado"}</span>
+          <div className={styles.mostVotedValues}>
+            {mostVoted.values.map((value) => (
+              <span
+                key={value}
+                className={`${styles.mostVotedValue} ${mostVoted.values.length > 1 ? styles.mostVotedValueTied : ""}`}
+              >
+                <CardValue value={value} />
+              </span>
+            ))}
+          </div>
+          <span className={styles.mostVotedCount}>
+            {mostVoted.count} de {mostVoted.total} {mostVoted.total === 1 ? "voto" : "votos"}
+            {mostVoted.values.length > 1 ? " cada" : ""}
+          </span>
+        </div>
       )}
     </div>
   );

@@ -8,6 +8,7 @@ import RoundControls from "../components/RoundControls/RoundControls";
 import SeatCard from "../components/SeatCard/SeatCard";
 import TablePanel from "../components/TablePanel/TablePanel";
 import ThemeToggle from "../components/ThemeToggle/ThemeToggle";
+import TopbarMenu from "../components/TopbarMenu/TopbarMenu";
 import { useJoinRoom } from "../hooks/useJoinRoom";
 import { clearIdentity, useModerator } from "../hooks/useModerator";
 import { useLeaveRoom } from "../hooks/useLeaveRoom";
@@ -15,6 +16,7 @@ import { usePresence } from "../hooks/usePresence";
 import { useRevealTransition } from "../hooks/useRevealTransition";
 import { useRoom } from "../hooks/useRoom";
 import { useRound } from "../hooks/useRound";
+import { roomClient } from "../services/roomClient";
 import { fireConfetti, shouldShowConfetti } from "../services/confetti";
 import { getRoundSummary, groupByValue } from "../services/mock/roomStore";
 import { POINT_SCALES, POINT_SCALE_LABELS } from "../types/room";
@@ -64,32 +66,10 @@ function InviteIcon({ status }: { status: InviteStatus }) {
   );
 }
 
-/** Ícone de "sair da sala" (porta + seta) — usado num botão só de ícone na topbar. */
-function LeaveIcon() {
-  return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M16 17l5-5-5-5M21 12H9"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
 export default function RoomPage() {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
-  const { room, loading } = useRoom(code);
+  const { room, loading, closedError } = useRoom(code);
   const { identity, saveIdentity } = useModerator(code);
   const { join, error, loading: joining } = useJoinRoom(code ?? "");
   const { vote, reveal, reset, error: roundError } = useRound(code, identity?.participantId);
@@ -142,6 +122,14 @@ export default function RoomPage() {
     navigate("/");
   }
 
+  /** Moderator-only action (spec 005, US3) — simple confirmation before removing (FR-012). */
+  async function handleRemoveParticipant(participantId: string, participantName: string) {
+    if (!code) return;
+    const confirmed = window.confirm(`Remover ${participantName} da sala?`);
+    if (!confirmed) return;
+    await roomClient.kickParticipant(code, participantId);
+  }
+
   const [inviteStatus, setInviteStatus] = useState<InviteStatus>("idle");
   const inviteTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
@@ -184,6 +172,20 @@ export default function RoomPage() {
     );
   }
 
+  if (closedError?.code === "ROOM_CLOSED_BY_MODERATOR") {
+    return (
+      <div className={styles.centeredStage}>
+        <div className={styles.messageCard}>
+          <h1 className={styles.messageTitle}>Sala encerrada</h1>
+          <p className={styles.message}>
+            A sala foi encerrada porque o moderador saiu. Peça um novo link a quem
+            organizou a sessão se quiser continuar.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!room) {
     return (
       <div className={styles.centeredStage}>
@@ -192,6 +194,27 @@ export default function RoomPage() {
           <p className={styles.message}>
             Esse link não corresponde a nenhuma sala ativa no momento. Verifique o
             endereço ou peça um novo link para quem organizou a sessão.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Identidade local existe (não é "nunca entrou"), mas sumiu da lista de
+  // participantes da sala — foi removido pelo moderador (spec 005, FR-015).
+  // Precisa vir antes do formulário de entrada abaixo, que também é
+  // acionado quando `isParticipant` é falso, mas por um motivo diferente
+  // (nunca ter entrado).
+  const wasRemoved = !!identity && !room.participants.some((p) => p.id === identity.participantId);
+
+  if (wasRemoved) {
+    return (
+      <div className={styles.centeredStage}>
+        <div className={styles.messageCard}>
+          <h1 className={styles.messageTitle}>Você foi removido da sala</h1>
+          <p className={styles.message}>
+            O moderador removeu você desta sala. Entre novamente pelo link se quiser
+            voltar a participar.
           </p>
         </div>
       </div>
@@ -228,6 +251,19 @@ export default function RoomPage() {
   const isModerator = identity?.participantId === room.moderatorId;
   const myVote = identity ? room.round.votes[identity.participantId] : undefined;
   const resultDistribution = revealed ? groupByValue(room) : null;
+  // Valor(es) mais votado(s) para destacar na mesa quando o resultado
+  // aparece — a mesa ficava vazia nesse momento. Em caso de empate, mostra
+  // TODOS os valores empatados (rótulo vira "Empate") em vez de escolher um
+  // arbitrariamente — o painel abaixo já mostra a distribuição completa,
+  // isso aqui é só um destaque, não a fonte da verdade.
+  const maxVoteCount =
+    resultDistribution && resultDistribution.groups.length > 0
+      ? Math.max(...resultDistribution.groups.map((group) => group.participants.length))
+      : undefined;
+  const mostVotedValues =
+    resultDistribution && maxVoteCount !== undefined
+      ? resultDistribution.groups.filter((group) => group.participants.length === maxVoteCount).map((group) => group.value)
+      : [];
 
   return (
     <div className={styles.app}>
@@ -267,16 +303,7 @@ export default function RoomPage() {
                 ? "Erro ao copiar"
                 : "Convidar time"}
           </button>
-          <ThemeToggle />
-          <button
-            type="button"
-            className={styles.leave}
-            onClick={handleLeave}
-            title="Sair da sala"
-            aria-label="Sair da sala"
-          >
-            <LeaveIcon />
-          </button>
+          <TopbarMenu onLeave={handleLeave} />
         </div>
       </div>
 
@@ -289,7 +316,15 @@ export default function RoomPage() {
           </div>
         )}
 
-        <TablePanel phase={phase} countdownNumber={countdownNumber} />
+        <TablePanel
+          phase={phase}
+          countdownNumber={countdownNumber}
+          mostVoted={
+            mostVotedValues.length > 0 && maxVoteCount !== undefined
+              ? { values: mostVotedValues, count: maxVoteCount, total: room.participants.length }
+              : undefined
+          }
+        />
 
         <ul className={styles.seats} aria-label="Participantes da sala">
           {room.participants.map((p, index) => (
@@ -300,6 +335,11 @@ export default function RoomPage() {
               revealed={revealed}
               isMe={p.id === identity?.participantId}
               index={index}
+              onRemove={
+                isModerator && p.id !== identity?.participantId
+                  ? () => handleRemoveParticipant(p.id, p.name)
+                  : undefined
+              }
             />
           ))}
         </ul>

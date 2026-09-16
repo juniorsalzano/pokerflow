@@ -11,10 +11,45 @@
 }
 
 .card {
+  position: relative;
   width: 100%;
   aspect-ratio: 84 / 112;
   perspective: 600px;
   container-type: inline-size;
+}
+
+/* Absolutely positioned on purpose — never affects layout/height of the
+   seat card, so it can't cause layout shift when it appears/disappears
+   (spec 005, moderator-only remove action). Dim at rest (still discoverable
+   on touch devices, which have no hover) — full opacity/color on hover or
+   focus. */
+.removeButton {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.removeButton:hover,
+.removeButton:focus-visible {
+  opacity: 1;
+  color: #fb7185;
+  border-color: #fb7185;
 }
 
 .flipper {

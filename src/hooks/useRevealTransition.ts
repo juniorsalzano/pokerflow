@@ -51,10 +51,14 @@ function staggeredDurationMs(itemCount: number, durationMs: number): number {
  * business rule nor read `round.votes` — only orchestrates when each visual
  * phase starts and ends.
  *
- * Assumed simplification: a participant who opens the room with the round
- * already revealed also sees the countdown play once (the hook doesn't
- * distinguish a "live reveal" from "I just arrived") — keeps the logic
- * single and predictable, without extra state just for that distinction.
+ * A participant who opens the room (or joins mid-round) with the round
+ * already revealed jumps straight to "result", no animation — nothing is
+ * happening live for them to watch. The countdown/flip sequence only plays
+ * for a reveal that happens while already mounted (`previous === "voting"`),
+ * distinguished from "first real state we've seen" via `previousStateRef`
+ * starting at `undefined` — `state` itself is never `undefined` once the
+ * room has loaded, so `previous === undefined` uniquely identifies that
+ * first observation, whichever state it turns out to be.
  */
 export function useRevealTransition(
   state: RoundState | undefined,
@@ -79,8 +83,18 @@ export function useRevealTransition(
       timeoutsRef.current.push(setTimeout(fn, ms));
     }
 
+    if (previous === undefined) {
+      // First real state we've observed for this room (mount, or the
+      // initial load finally resolving) — reflect it immediately, no
+      // animation: whatever it is, it already happened before we looked.
+      clearTimeouts();
+      setCountdownNumber(null);
+      setPhase(state === "revealed" ? "result" : "voting");
+      return;
+    }
+
     const revealing = state === "revealed" && previous !== "revealed";
-    const resetting = state === "voting" && previous !== undefined && previous !== "voting";
+    const resetting = state === "voting" && previous !== "voting";
 
     if (revealing) {
       clearTimeouts();

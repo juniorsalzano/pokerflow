@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
 import SeatCard from "../../src/components/SeatCard/SeatCard";
 import { Participant } from "../../src/types/room";
 
@@ -79,5 +80,24 @@ describe("SeatCard — visibilidade do próprio voto (FR-004a)", () => {
     // é isso que garante que ela reexecute a cada troca de voto, não só na
     // primeira vez.
     expect(secondFlipper).not.toBe(firstFlipper);
+  });
+});
+
+describe("SeatCard — remoção pelo moderador (spec 005, US3)", () => {
+  const otherParticipant: Participant = { id: "p-outro", name: "Bruno", isModerator: false, joinedAt: 0 };
+
+  it("não mostra nenhuma ação de remover quando onRemove não é passado (participante comum vendo a sala, ou a própria linha do moderador)", () => {
+    render(<SeatCard participant={otherParticipant} vote={undefined} revealed={false} isMe={false} />);
+    expect(screen.queryByLabelText(/Remover/)).not.toBeInTheDocument();
+  });
+
+  it("mostra a ação de remover quando onRemove é passado, e aciona onRemove ao clicar", async () => {
+    const onRemove = vi.fn();
+    render(<SeatCard participant={otherParticipant} vote={undefined} revealed={false} isMe={false} onRemove={onRemove} />);
+
+    const button = screen.getByLabelText("Remover Bruno da sala");
+    await userEvent.click(button);
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
   });
 });

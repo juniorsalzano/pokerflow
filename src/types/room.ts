@@ -85,7 +85,8 @@ export type RoomClientErrorCode =
   | "ROUND_ALREADY_REVEALED"
   | "INVALID_VALUE"
   | "MODERATOR_ONLY"
-  | "NOT_AUTHORIZED";
+  | "NOT_AUTHORIZED"
+  | "ROOM_CLOSED_BY_MODERATOR";
 
 export class RoomClientError extends Error {
   constructor(

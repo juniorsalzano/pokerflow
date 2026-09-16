@@ -1,4 +1,4 @@
-import { CreateRoomInput, Participant, Room } from "../types/room";
+import { CreateRoomInput, Participant, Room, RoomClientError } from "../types/room";
 
 /**
  * Single boundary between the UI and the data source (contracts/api-contract.md).
@@ -15,9 +15,18 @@ export interface RoomClient {
 
   getRoom(code: string): Promise<Room | null>;
 
-  subscribeToRoom(code: string, callback: (room: Room | null) => void): () => void;
+  /**
+   * `error` is only ever set when `room` is closed specifically because the
+   * moderator left/went absent (spec 005, `ROOM_CLOSED_BY_MODERATOR`) — lets
+   * the UI show a dedicated message instead of the generic "not found",
+   * without changing the meaning of `room === null` anywhere else.
+   */
+  subscribeToRoom(code: string, callback: (room: Room | null, error?: RoomClientError) => void): () => void;
 
   leaveRoom(code: string, participantId: string): Promise<void>;
+
+  /** Moderator-only: removes another participant from the room (spec 005, FR-009/FR-010). */
+  kickParticipant(code: string, targetParticipantId: string): Promise<void>;
 
   /** Periodic presence signal (FR-010) — keeps the participant active in the room. No-op in the mock (research.md §14, feature 003). */
   sendHeartbeat(code: string, participantId: string): Promise<void>;
