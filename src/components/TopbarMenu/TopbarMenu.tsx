@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useTheme } from "../../hooks/useTheme";
+import ThemeToggle from "../ThemeToggle/ThemeToggle";
 import styles from "./TopbarMenu.module.css";
 
 interface TopbarMenuProps {
@@ -12,33 +12,6 @@ function KebabIcon() {
       <circle cx="12" cy="5" r="1.8" fill="currentColor" />
       <circle cx="12" cy="12" r="1.8" fill="currentColor" />
       <circle cx="12" cy="19" r="1.8" fill="currentColor" />
-    </svg>
-  );
-}
-
-/** Shows the icon of the theme you'll SWITCH TO (sun while dark, moon while light) — matches the label next to it. */
-function ThemeIcon({ dark }: { dark: boolean }) {
-  if (dark) {
-    return (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-        <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="2" />
-        <path
-          d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <path
-        d="M21 12.5A8.5 8.5 0 1 1 11.5 3a7 7 0 0 0 9.5 9.5Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
     </svg>
   );
 }
@@ -72,10 +45,8 @@ function LeaveIcon() {
  * height/layout when it opens or closes (no layout shift either way).
  */
 export default function TopbarMenu({ onLeave }: TopbarMenuProps) {
-  const { theme, toggle } = useTheme();
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const dark = theme === "dark";
 
   useEffect(() => {
     if (!open) return;
@@ -113,18 +84,13 @@ export default function TopbarMenu({ onLeave }: TopbarMenuProps) {
 
       {open && (
         <div className={styles.menu} role="menu">
-          <button
-            type="button"
-            role="menuitem"
-            className={styles.item}
-            onClick={() => {
-              toggle();
-              setOpen(false);
-            }}
-          >
-            <ThemeIcon dark={dark} />
-            {dark ? "Tema claro" : "Tema escuro"}
-          </button>
+          {/* Linha de configuração, não uma ação de disparo único — trocar o
+              tema não fecha o menu (a pessoa pode querer comparar os dois
+              temas antes de fechar). */}
+          <div className={styles.toggleRow}>
+            <span className={styles.toggleLabel}>Tema</span>
+            <ThemeToggle />
+          </div>
           <button
             type="button"
             role="menuitem"

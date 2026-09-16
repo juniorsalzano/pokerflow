@@ -43,6 +43,24 @@
   box-shadow: 0 16px 32px rgba(0, 0, 0, 0.28);
 }
 
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 10px 7px 12px;
+  /* Separa visualmente da ação abaixo ("Sair da sala") — essa linha é uma
+     configuração persistente, não uma ação de disparo único. */
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+
+.toggleLabel {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
 .item {
   display: flex;
   align-items: center;
